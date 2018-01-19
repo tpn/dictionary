@@ -300,51 +300,6 @@ LoadDbgEng(
     return TRUE;
 }
 
-RTL_API
-BOOL
-InitializeInjection(PRTL Rtl)
-{
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
-    }
-
-    if (Rtl->InjectionThunkRoutine) {
-        return TRUE;
-    }
-
-    if (!IsValidMinimumDirectoryUnicodeString(&Rtl->InjectionThunkDllPath)) {
-
-        //
-        // SetInjectionThunkDllPath() needs to be called.
-        //
-
-        __debugbreak();
-        return FALSE;
-    }
-
-    Rtl->InjectionThunkModule = LoadLibraryW(Rtl->InjectionThunkDllPath.Buffer);
-    if (!Rtl->InjectionThunkModule) {
-        __debugbreak();
-        return FALSE;
-    }
-
-    Rtl->InjectionThunkRoutine = (
-        GetProcAddress(
-            Rtl->InjectionThunkModule,
-            "InjectionThunk"
-        )
-    );
-
-    if (!Rtl->InjectionThunkRoutine) {
-        __debugbreak();
-        return FALSE;
-    }
-
-    InitializeInjectionFunctions(Rtl, &Rtl->InjectionFunctions);
-
-    return TRUE;
-}
-
 _Use_decl_annotations_
 BOOL
 ResolveNvcudaFunctions(
@@ -2737,14 +2692,6 @@ RtlCryptGenRandom(
     return TRUE;
 }
 
-BOOL
-RtlInitializeInjection(
-    VOID
-    )
-{
-    return TRUE;
-}
-
 RTL_API RTL_SET_DLL_PATH RtlpSetDllPath;
 
 _Use_decl_annotations_
@@ -3796,9 +3743,6 @@ InitializeRtl(
     Rtl->AtExitEx = AtExitExImpl;
     Rtl->RundownGlobalAtExitFunctions = RundownGlobalAtExitFunctions;
 
-    Rtl->InitializeInjection = InitializeInjection;
-    Rtl->Inject = Inject;
-
     Rtl->GetCu = GetCu;
 
     //
@@ -3873,8 +3817,6 @@ InitializeRtl(
     Rtl->ProbeForRead = ProbeForRead;
 
     Rtl->SetDllPath = RtlpSetDllPath;
-    Rtl->SetInjectionThunkDllPath = RtlpSetInjectionThunkDllPath;
-    Rtl->CopyFunction = CopyFunction;
 
     Rtl->CreateNamedEvent = RtlpCreateNamedEvent;
     Rtl->CreateRandomObjectNames = CreateRandomObjectNames;
