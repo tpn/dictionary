@@ -41,6 +41,12 @@
     <ClCompile Include="..\Dictionary\HistogramTable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Dictionary\AddWord.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dictionary\FindWord.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>

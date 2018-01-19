@@ -80,8 +80,10 @@
     <ClInclude Include="Dictionary.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AddWord.c" />
     <ClCompile Include="BitmapTable.c" />
     <ClCompile Include="DictionaryTls.c" />
+    <ClCompile Include="FindWord.c" />
     <ClCompile Include="HistogramTable.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -89,11 +91,6 @@
     <ClCompile Include="..\Rtl\__C_specific_handler.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Dictionary.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TracerHeapLib\TracerHeapLib.vcxproj">
-      <Project>{4868dda6-86d8-4fdf-ab71-8f9ea51a1142}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
