@@ -40,10 +40,8 @@ Abstract:
 
 typedef struct _TRACE_STORE_TYPES {
     PRTL_BITMAP Bitmap;
-    PDEBUG_ENGINE_DISPLAYED_TYPE DisplayedType;
     PLINKED_LINE DisplayTypeLines;
     PCHAR DisplayTypeText;
-    PDEBUG_ENGINE_EXAMINED_SYMBOL ExaminedSymbol;
     PLINKED_LINE ExamineSymbolsLines;
     PCHAR ExamineSymbolsText;
     PTRACE_FUNCTION_TABLE FunctionTable;
@@ -64,7 +62,6 @@ typedef struct _TRACE_STORE_TYPES {
     PSYMBOL_INFO SymbolInfo;
     PTRACE_SYMBOL_TABLE SymbolTable;
     PTRACE_SYMBOL_TABLE_ENTRY SymbolTableEntry;
-    PDEBUG_ENGINE_UNASSEMBLED_FUNCTION UnassembledFunction;
     PLINKED_LINE UnassembleFunctionLines;
     PCHAR UnassembleFunctionText;
     PWCHAR UnicodeStringBuffer;

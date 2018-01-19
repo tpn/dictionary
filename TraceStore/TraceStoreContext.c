@@ -758,56 +758,6 @@ Return Value:
         }
     }
 
-    if (TraceStores->Flags.EnableTypeInfoTracing ||
-        TraceStores->Flags.EnableAssemblyTracing) {
-
-        PTRACE_STORE TypeInfoTableStore;
-        PTRACE_STORE FunctionTableStore;
-        PTRACE_STORE FunctionSourceCodeStore;
-
-        //
-        // Attempt to create the TRACE_DEBUG_CONTEXT structure.
-        //
-
-        Success = InitializeTraceDebugContext(TraceContext);
-        if (!Success) {
-            __debugbreak();
-            goto Error;
-        }
-
-        //
-        // Override the BindComplete methods.
-        //
-
-        TypeInfoTableStore = (
-            TraceStoreIdToTraceStore(
-                TraceStores,
-                TraceStoreTypeInfoTableId
-            )
-        );
-
-        FunctionTableStore = (
-            TraceStoreIdToTraceStore(
-                TraceStores,
-                TraceStoreFunctionTableId
-            )
-        );
-
-        FunctionSourceCodeStore = (
-            TraceStoreIdToTraceStore(
-                TraceStores,
-                TraceStoreFunctionSourceCodeId
-            )
-        );
-
-        TypeInfoTableStore->BindComplete = TypeInfoTableStoreBindComplete;
-        FunctionTableStore->BindComplete = FunctionTableStoreBindComplete;
-        FunctionSourceCodeStore->BindComplete = (
-            FunctionSourceCodeStoreBindComplete
-        );
-    }
-
-
     //
     // Intentional follow-on to InitializeAllocators.
     //

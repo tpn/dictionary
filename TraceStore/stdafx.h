@@ -36,7 +36,6 @@ Abstract:
 #include "../Rtl/atexit.h"
 #include "../TracerConfig/TracerConfig.h"
 #include "../TracerHeap/TracerHeap.h"
-#include "../DebugEngine/DebugEngine.h"
 #include "TraceStoreIndex.h"
 #include "TraceStore.h"
 #include "TraceStorePrivate.h"
