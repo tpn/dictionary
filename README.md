@@ -30,3 +30,35 @@ A dictionary component with anagram support.
    more I'll probably switch to unit tests via the TestDirectory
    component.
 
+   Hours: 7.38
+
+## Day 2
+
+1. Implement the initial unit test scaffolding and convert yesterday's bitmap
+   and histogram tests into corresponding unit tests.
+
+2. Add a CRC-32 64-bit hash routine for the histogram in additional to the
+   32-bit one.
+
+3. Flush out the initial bitmap and histogram table and table entry structures.
+
+4. Flush out more of the underlying dictionary structure.
+
+5. Fix some build issues and do some cleanup of various items copied over
+   yesterday.
+
+6. Add some TLS glue that'll facilitate structure optimization regarding table
+   entries.
+
+7. Finish the initial CreateAndInitializeDictionary() implementation
+
+8. Stub out the initial add word/find word etc functions ready for tomorrow.
+
+    Hours: 7.17 (3.07, 1.33, 2.77)
+
+## Day 3 TODO
+
+    Implement AddWord, FindWord, DeleteWord, GetAnagrams, GetWordStats and
+    GetDictionaryStats.
+
+<!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
