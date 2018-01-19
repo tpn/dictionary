@@ -486,12 +486,6 @@ Return Value:
         goto Error;
     }
 
-    if (!Rtl->SetInjectionThunkDllPath(Rtl,
-                                       Allocator,
-                                       &Paths->InjectionThunkDllPath)) {
-        goto Error;
-    }
-
     //
     // Everything succeeded, update caller's pointers and return success.
     //
