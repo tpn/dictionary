@@ -122,8 +122,5 @@
     <ClCompile Include="CopyPages.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\DebugEngine\DebugEngineInterfaces.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

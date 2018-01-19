@@ -41,7 +41,6 @@ Abstract:
 #include "../Rtl/Rtl.h"
 #include "../Rtl/Sqlite.h"
 #include "../TracerConfig/TracerConfig.h"
-#include "../DebugEngine/DebugEngine.h"
 #include "TraceStoreIndex.h"
 
 #endif
@@ -2497,8 +2496,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TRACE_SYMBOL_CONTEXT {
     PTRACE_MODULE_TABLE_ENTRY CurrentModuleTableEntry;
     LARGE_INTEGER CurrentTimestamp;
 
-    PDEBUG_ENGINE_SESSION DebugEngineSession;
-    PDESTROY_DEBUG_ENGINE_SESSION DestroyDebugEngineSession;
+    PVOID DebugEngineSession;
+    PVOID DestroyDebugEngineSession;
 
     //
     // Pad out to 256 bytes.
@@ -2756,8 +2755,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TRACE_DEBUG_CONTEXT {
     // (160 bytes consumed.)
     //
 
-    PDEBUG_ENGINE_SESSION DebugEngineSession;
-    PDESTROY_DEBUG_ENGINE_SESSION DestroyDebugEngineSession;
+    PVOID DebugEngineSession;
+    PVOID DestroyDebugEngineSession;
 
     //
     // (216 bytes consumed.)

@@ -110,7 +110,6 @@
     <ClCompile Include="Commandline.c" />
     <ClCompile Include="Path.c" />
     <ClCompile Include="SymbolLoader.c" />
-    <ClCompile Include="..\DebugEngine\DebugEngineInterfaces.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AsmLib\AsmLib.vcxproj">
