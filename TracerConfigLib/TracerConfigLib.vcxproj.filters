@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{60D1C3A6-9B4C-4BA5-B3AE-1BE53C04CAD2}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{C283F0D5-85F7-4E7E-BB55-24CAE4A67FA4}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{E0E75927-2AB8-4C05-BAFF-BCE6BA3BC170}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="../TracerConfig/stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../TracerConfig/targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../TracerConfig/TracerConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../TracerConfig/TracerConfigConstants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../TracerConfig/TracerConfigPrivate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="../TracerConfig/CreateTraceSessionDirectory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../TracerConfig/DestroyTracerConfig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../TracerConfig/HeapAllocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../TracerConfig/InitializeTracerConfig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../TracerConfig/stdafx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TracerConfig\TracerConfigConstants.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TracerConfig\TracerPath.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TracerConfig\TracerConfigPrivate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{6D7DB358-C3A0-4B8D-B406-D61EE6DF6AF4}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{2042C3F2-BEAD-4F20-AFE4-28678670EAE1}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{8C6EED73-60D9-4B6A-BBB5-28E00B82C084}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TraceStore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TraceStore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TraceStoreConstants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TraceStorePrivate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TraceStoreIndex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreAllocation.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreContext.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreMemoryMap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStorePath.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStores.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreSession.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreTime.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreAddress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreTimer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Rtl\__C_specific_handler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreMetadata.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoresRundown.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoresGlobalRundown.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreRelocation.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreConstants.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreTraits.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreCallbacks.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreBind.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreAddressRange.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreAllocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreWorkingSet.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStorePerformance.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreAtExitEx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreLoader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreSymbols.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreDebugEngine.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreTypes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TraceStoreIntervals.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <!--
+  <ItemGroup>
+    <MASM Include="..\Rtl\__chkstk.s" Condition="'$(Platform)' == 'x64'">
+      <Filter>Source Files</Filter>
+    </MASM>
+  </ItemGroup>
+  -->
+</Project>

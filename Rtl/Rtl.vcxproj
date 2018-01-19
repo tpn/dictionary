@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGOptimize|Win32">
+      <Configuration>PGOptimize</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGOptimize|x64">
+      <Configuration>PGOptimize</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGInstrument|Win32">
+      <Configuration>PGInstrument</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGInstrument|x64">
+      <Configuration>PGInstrument</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGUpdate|Win32">
+      <Configuration>PGUpdate</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="PGUpdate|x64">
+      <Configuration>PGUpdate</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{91695EDE-DFC2-4364-A959-3C8A0870507A}</ProjectGuid>
+    <RootNamespace>Rtl</RootNamespace>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\Tracer.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Platform)'=='Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Platform)'=='x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>AsmLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <PreprocessorDefinitions>_RTL_INTERNAL_BUILD;_ASM_NO_API_EXPORT_IMPORT;_DEBUG_ENGINE_NO_API_EXPORT_IMPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="atexit.h" />
+    <ClInclude Include="AtExitEx.h" />
+    <ClInclude Include="Commandline.h" />
+    <ClInclude Include="Cu.h" />
+    <ClInclude Include="Cuda.h" />
+    <ClInclude Include="DbghelpFunctionPointerTypedefs.h" />
+    <ClInclude Include="Injection.h" />
+    <ClInclude Include="InjectionInline.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="RtlConstants.h" />
+    <ClInclude Include="RtlPrivate.h" />
+    <ClInclude Include="Sqlite.h" />
+    <ClInclude Include="sqlite3.h" />
+    <ClInclude Include="sqlite3ext.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Rtl.h" />
+    <ClInclude Include="Time.h" />
+    <ClInclude Include="__C_specific_handler.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="atexit.c" />
+    <ClCompile Include="AtExitEx.c" />
+    <ClCompile Include="CopyFunction.c" />
+    <ClCompile Include="CopyPages.c" />
+    <ClCompile Include="dllmain.c">
+      <PrecompiledHeader />
+    </ClCompile>
+    <ClCompile Include="File.c" />
+    <ClCompile Include="Injection.c" />
+    <ClCompile Include="Loader.c" />
+    <ClCompile Include="Privilege.c" />
+    <ClCompile Include="Registry.c" />
+    <ClCompile Include="RtlAtExitRundown.c" />
+    <ClCompile Include="RtlGlobalAtExitRundown.c" />
+    <ClCompile Include="stdafx.c">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Rtl.c" />
+    <ClCompile Include="PathEnvironmentVariable.c" />
+    <ClCompile Include="Commandline.c" />
+    <ClCompile Include="Path.c" />
+    <ClCompile Include="SymbolLoader.c" />
+    <ClCompile Include="..\DebugEngine\DebugEngineInterfaces.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AsmLib\AsmLib.vcxproj">
+      <Project>{a74874ac-5f75-42b8-9e94-4028de4d1829}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>
