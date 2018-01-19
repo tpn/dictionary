@@ -80,6 +80,9 @@
     <ClInclude Include="Dictionary.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BitmapTable.c" />
+    <ClCompile Include="DictionaryTls.c" />
+    <ClCompile Include="HistogramTable.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

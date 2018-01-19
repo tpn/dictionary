@@ -41,6 +41,15 @@
     <ClCompile Include="..\Rtl\__C_specific_handler.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DictionaryTls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BitmapTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HistogramTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>

@@ -86,9 +86,11 @@ mainCRTStartup()
     LONG ExitCode = 0;
 
     PRTL Rtl;
+    BOOL Success;
     PTRACER_CONFIG TracerConfig;
     ALLOCATOR Allocator;
     PDICTIONARY Dictionary;
+    DICTIONARY_CREATE_FLAGS CreateFlags;
 
     //
     // Initialization glue for our allocator, config, rtl and dictionary.
@@ -109,7 +111,14 @@ mainCRTStartup()
         "CreateAndInitializeTracerConfigAndRtl()"
     );
 
-    if (!CreateAndInitializeDictionary(Rtl, &Allocator, &Dictionary)) {
+    CreateFlags.AsULong = 0;
+
+    Success = CreateAndInitializeDictionary(Rtl,
+                                            &Allocator,
+                                            CreateFlags,
+                                            &Dictionary); 
+
+    if (!Success) {
         ExitCode = 1;
         goto Error;
     }
