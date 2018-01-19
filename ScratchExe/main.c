@@ -75,8 +75,32 @@ Scratch1(
     }
 
     return;
-
 }
+
+VOID
+Scratch2(
+    PRTL Rtl,
+    PALLOCATOR Allocator
+    )
+{
+    BOOLEAN Success;
+    DICTIONARY_CREATE_FLAGS CreateFlags;
+    PDICTIONARY Dictionary;
+
+    CreateFlags.AsULong = 0;
+
+    Success = CreateAndInitializeDictionary(Rtl,
+                                            Allocator,
+                                            CreateFlags,
+                                            &Dictionary);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    return;
+}
+
 
 DECLSPEC_NORETURN
 VOID
@@ -86,11 +110,8 @@ mainCRTStartup()
     LONG ExitCode = 0;
 
     PRTL Rtl;
-    BOOL Success;
     PTRACER_CONFIG TracerConfig;
     ALLOCATOR Allocator;
-    PDICTIONARY Dictionary;
-    DICTIONARY_CREATE_FLAGS CreateFlags;
 
     //
     // Initialization glue for our allocator, config, rtl and dictionary.
@@ -111,19 +132,9 @@ mainCRTStartup()
         "CreateAndInitializeTracerConfigAndRtl()"
     );
 
-    CreateFlags.AsULong = 0;
+    // Scratch1();
 
-    Success = CreateAndInitializeDictionary(Rtl,
-                                            &Allocator,
-                                            CreateFlags,
-                                            &Dictionary); 
-
-    if (!Success) {
-        ExitCode = 1;
-        goto Error;
-    }
-
-    Scratch1(Rtl, Dictionary);
+    Scratch2(Rtl, &Allocator);
 
 Error:
 
