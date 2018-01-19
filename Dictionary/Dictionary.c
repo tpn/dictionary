@@ -1,3 +1,17 @@
+/*++
+
+Copyright (c) 2018 Trent Nelson <trent@trent.me>
+
+Module Name:
+
+    Dictionary.c
+
+Abstract:
+
+    This is the main header file for the Dictionary component.
+
+--*/
+
 #include "stdafx.h"
 
 _Use_decl_annotations_
@@ -72,3 +86,45 @@ End:
 
     return Success;
 }
+
+//
+// Exported versions of inline routines provided in the public header file.
+//
+
+_Use_decl_annotations_
+BOOLEAN
+CreateCharacterBitmapForString(
+    PCLONG_STRING String,
+    PCHARACTER_BITMAP Bitmap
+    )
+{
+    return CreateCharacterBitmapForStringInline(String, Bitmap);
+}
+
+_Use_decl_annotations_
+BOOLEAN
+CreateCharacterHistogramForStringHash32(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM Histogram,
+    PULONG Hash32Pointer
+    )
+{
+    return CreateCharacterHistogramForStringHash32Inline(String,
+                                                         Histogram,
+                                                         Hash32Pointer);
+}
+
+_Use_decl_annotations_
+BOOLEAN
+CreateCharacterHistogramForStringHash64(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM Histogram,
+    PULONGLONG Hash64Pointer
+    )
+{
+    return CreateCharacterHistogramForStringHash64Inline(String,
+                                                         Histogram,
+                                                         Hash64Pointer);
+}
+
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -26,8 +26,8 @@ Scratch1(
     ULONG OofHistogramHash;
     CHARACTER_BITMAP FooBitmap;
     CHARACTER_BITMAP OofBitmap;
-    CHARACTER_FREQUENCY_HISTOGRAM FooHistogram;
-    CHARACTER_FREQUENCY_HISTOGRAM OofHistogram;
+    CHARACTER_HISTOGRAM FooHistogram;
+    CHARACTER_HISTOGRAM OofHistogram;
     LONG_STRING Foo = CONSTANT_LONG_STRING("foo");
     LONG_STRING Oof = CONSTANT_LONG_STRING("oof");
 
@@ -49,7 +49,7 @@ Scratch1(
     }
 
     Success =
-        CreateCharacterFrequencyHistogramForStringInline(
+        CreateCharacterHistogramForStringHash32Inline(
             &Foo,
             &FooHistogram,
             &FooHistogramHash
@@ -60,7 +60,7 @@ Scratch1(
     }
 
     Success =
-        CreateCharacterFrequencyHistogramForStringInline(
+        CreateCharacterHistogramForStringHash32Inline(
             &Oof,
             &OofHistogram,
             &OofHistogramHash
