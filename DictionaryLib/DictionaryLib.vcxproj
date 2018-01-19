@@ -84,7 +84,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="../Dictionary/Dictionary.c" />
+    <ClCompile Include="..\Dictionary\AddWord.c" />
     <ClCompile Include="..\Dictionary\BitmapTable.c" />
+    <ClCompile Include="..\Dictionary\FindWord.c" />
     <ClCompile Include="..\Dictionary\HistogramTable.c" />
   </ItemGroup>
   <ItemGroup>

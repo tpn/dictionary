@@ -50,6 +50,12 @@
     <ClCompile Include="HistogramTable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AddWord.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FindWord.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>
