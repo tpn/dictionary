@@ -35,6 +35,12 @@
     <ClCompile Include="../Dictionary/Dictionary.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Dictionary\BitmapTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dictionary\HistogramTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>

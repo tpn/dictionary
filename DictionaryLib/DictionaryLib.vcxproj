@@ -84,6 +84,8 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="../Dictionary/Dictionary.c" />
+    <ClCompile Include="..\Dictionary\BitmapTable.c" />
+    <ClCompile Include="..\Dictionary\HistogramTable.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TracerHeapLib\TracerHeapLib.vcxproj">

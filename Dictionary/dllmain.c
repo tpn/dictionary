@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2016 Trent Nelson <trent@trent.me>
+Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -8,9 +8,9 @@ Module Name:
 
 Abstract:
 
-    This is the DLL main entry point for the TraceStore DLL.  It is responsible
-    for hooking into the DLL_PROCESS_ATTACH and DLL_PROCESS_DETACH messages
-    in order to facilitate trace stores rundown functionality.
+    This is the DLL main entry point for the Dictionary component.  It hooks
+    into process and thread attach and detach messages in order to provide
+    TLS glue (see DictionaryTls.c for more information).
 
 --*/
 
@@ -27,12 +27,18 @@ _DllMainCRTStartup(
     BOOL IsProcessTerminating = FALSE;
     switch (Reason) {
         case DLL_PROCESS_ATTACH:
+            if (!DictionaryTlsProcessAttach(Module, Reason, Reserved)) {
+                return FALSE;
+            }
             break;
         case DLL_THREAD_ATTACH:
             break;
         case DLL_THREAD_DETACH:
             break;
         case DLL_PROCESS_DETACH:
+            if (!DictionaryTlsProcessDetach(Module, Reason, Reserved)) {
+                NOTHING;
+            }
             break;
     }
 

@@ -145,6 +145,16 @@ typedef const WORD_ENTRY *PCWORD_ENTRY;
 // Define the DICTIONARY interface function pointers.
 //
 
+typedef union _DICTIONARY_CREATE_FLAGS {
+    struct {
+        ULONG Unused:32;
+    };
+    LONG AsLong;
+    ULONG AsULong;
+} DICTIONARY_CREATE_FLAGS;
+typedef DICTIONARY_CREATE_FLAGS *PDICTIONARY_CREATE_FLAGS;
+C_ASSERT(sizeof(DICTIONARY_CREATE_FLAGS) == sizeof(ULONG));
+
 typedef
 _Check_return_
 _Success_(return != 0)
@@ -152,6 +162,7 @@ BOOLEAN
 (NTAPI CREATE_AND_INITIALIZE_DICTIONARY)(
     _In_ PRTL Rtl,
     _In_ PALLOCATOR Allocator,
+    _In_opt_ DICTIONARY_CREATE_FLAGS CreateFlags,
     _Outptr_result_nullonfailure_ PDICTIONARY *Dictionary
     );
 
@@ -293,6 +304,7 @@ typedef struct _CHARACTER_HISTOGRAM {
     DECLSPEC_ALIGN(256) ULONG CharacterCounts[NUMBER_OF_CHARACTER_BITS];
 } CHARACTER_HISTOGRAM;
 typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
+typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
 
 typedef
 _Success_(return != 0)
@@ -304,6 +316,14 @@ BOOLEAN
     );
 typedef CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32
       *PCREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32;
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI COMPARE_CHARACTER_HISTOGRAMS)(
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Left,
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Right
+    );
+typedef COMPARE_CHARACTER_HISTOGRAMS *PCOMPARE_CHARACTER_HISTOGRAMS;
 
 FORCEINLINE
 _Success_(return != 0)
