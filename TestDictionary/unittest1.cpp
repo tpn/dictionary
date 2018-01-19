@@ -32,7 +32,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #define STRING_DECL(Name)                    \
     PCLONG_STRING Name##String = &##Name;    \
     ULONG Name##HistogramHash32;             \
-    ULONG Name##HistogramHash64;             \
+    ULONGLONG Name##HistogramHash64;         \
     CHARACTER_BITMAP Name##Bitmap;           \
     CHARACTER_HISTOGRAM Name##Histogram;     \
     UNUSED_PARAMETER(Name##Bitmap);          \
@@ -52,7 +52,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
     Assert::IsTrue(                              \
         CreateCharacterHistogramForStringHash32( \
             Name##String,                        \
-            &Name##Bitmap,                       \
+            &Name##Histogram,                    \
             &##Name##HistogramHash32             \
         )                                        \
     )
@@ -61,7 +61,7 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
     Assert::IsTrue(                              \
         CreateCharacterHistogramForStringHash64( \
             Name##String,                        \
-            &Name##Bitmap,                       \
+            &Name##Histogram,                    \
             &##Name##HistogramHash64             \
         )                                        \
     )
@@ -101,6 +101,28 @@ namespace TestDictionary
             MAKE_BITMAP(Below);
 
             Assert::AreEqual(ElbowBitmap.Hash, BelowBitmap.Hash);
+        }
+
+        TEST_METHOD(TestMethod2)
+        {
+            STRING_DECL(Elbow);
+            STRING_DECL(Below);
+
+            MAKE_HISTOGRAM_HASH32(Elbow);
+            MAKE_HISTOGRAM_HASH32(Below);
+
+            Assert::AreEqual(ElbowHistogramHash32, BelowHistogramHash32);
+        }
+
+        TEST_METHOD(TestMethod3)
+        {
+            STRING_DECL(Elbow);
+            STRING_DECL(Below);
+
+            MAKE_HISTOGRAM_HASH64(Elbow);
+            MAKE_HISTOGRAM_HASH64(Below);
+
+            Assert::AreEqual(ElbowHistogramHash64, BelowHistogramHash64);
         }
 
     };
