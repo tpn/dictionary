@@ -25,8 +25,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TraceStore", "TraceStore\Tr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TracerConfigLib", "TracerConfigLib\TracerConfigLib.vcxproj", "{8A5AAEC6-FB14-49C3-8837-FE8A54D23C1D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TracerExe", "TracerExe\TracerExe.vcxproj", "{ED5C33CF-378C-44F1-9F48-931DC385A50B}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TracerCore", "TracerCore\TracerCore.vcxproj", "{041D453B-0451-43D5-B4E6-074660EEE1BF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TracerCoreLib", "TracerCoreLib\TracerCoreLib.vcxproj", "{88DCC275-44FE-47B1-BDBB-FD5FB8D24ED7}"
@@ -45,6 +43,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dictionary", "Dictionary\Dictionary.vcxproj", "{B512054C-A17F-4E70-9AD2-1C79856AC0B1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DictionaryLib", "DictionaryLib\DictionaryLib.vcxproj", "{FE98FE70-96FF-463A-A640-CA04D4549A81}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestDictionary", "TestDictionary\TestDictionary.vcxproj", "{500B3B07-E505-4566-85FA-8B64843EC684}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -180,25 +180,6 @@ Global
 		{8A5AAEC6-FB14-49C3-8837-FE8A54D23C1D}.Release|x64.Build.0 = Release|x64
 		{8A5AAEC6-FB14-49C3-8837-FE8A54D23C1D}.Release|x86.ActiveCfg = Release|Win32
 		{8A5AAEC6-FB14-49C3-8837-FE8A54D23C1D}.Release|x86.Build.0 = Release|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Debug|x64.ActiveCfg = Debug|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Debug|x64.Build.0 = Debug|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Debug|x86.ActiveCfg = Debug|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Debug|x86.Build.0 = Debug|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGInstrument|x64.ActiveCfg = PGInstrument|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGInstrument|x64.Build.0 = PGInstrument|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGInstrument|x86.ActiveCfg = PGInstrument|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGInstrument|x86.Build.0 = PGInstrument|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGOptimize|x64.ActiveCfg = PGOptimize|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGOptimize|x86.ActiveCfg = PGOptimize|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGOptimize|x86.Build.0 = PGOptimize|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGUpdate|x64.ActiveCfg = PGUpdate|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGUpdate|x64.Build.0 = PGUpdate|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGUpdate|x86.ActiveCfg = PGUpdate|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.PGUpdate|x86.Build.0 = PGUpdate|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Release|x64.ActiveCfg = Release|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Release|x64.Build.0 = Release|x64
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Release|x86.ActiveCfg = Release|Win32
-		{ED5C33CF-378C-44F1-9F48-931DC385A50B}.Release|x86.Build.0 = Release|Win32
 		{041D453B-0451-43D5-B4E6-074660EEE1BF}.Debug|x64.ActiveCfg = Debug|x64
 		{041D453B-0451-43D5-B4E6-074660EEE1BF}.Debug|x64.Build.0 = Debug|x64
 		{041D453B-0451-43D5-B4E6-074660EEE1BF}.Debug|x86.ActiveCfg = Debug|Win32
@@ -338,6 +319,26 @@ Global
 		{FE98FE70-96FF-463A-A640-CA04D4549A81}.Release|x64.Build.0 = Release|x64
 		{FE98FE70-96FF-463A-A640-CA04D4549A81}.Release|x86.ActiveCfg = Release|Win32
 		{FE98FE70-96FF-463A-A640-CA04D4549A81}.Release|x86.Build.0 = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Debug|x64.ActiveCfg = Debug|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Debug|x64.Build.0 = Debug|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Debug|x86.ActiveCfg = Debug|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Debug|x86.Build.0 = Debug|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGInstrument|x64.ActiveCfg = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGInstrument|x64.Build.0 = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGInstrument|x86.ActiveCfg = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGInstrument|x86.Build.0 = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGOptimize|x64.ActiveCfg = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGOptimize|x64.Build.0 = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGOptimize|x86.ActiveCfg = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGOptimize|x86.Build.0 = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGUpdate|x64.ActiveCfg = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGUpdate|x64.Build.0 = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGUpdate|x86.ActiveCfg = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.PGUpdate|x86.Build.0 = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Release|x64.ActiveCfg = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Release|x64.Build.0 = Release|x64
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Release|x86.ActiveCfg = Release|Win32
+		{500B3B07-E505-4566-85FA-8B64843EC684}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
