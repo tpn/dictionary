@@ -92,13 +92,11 @@
   <ItemGroup>
     <ClCompile Include="atexit.c" />
     <ClCompile Include="AtExitEx.c" />
-    <ClCompile Include="CopyFunction.c" />
     <ClCompile Include="CopyPages.c" />
     <ClCompile Include="dllmain.c">
       <PrecompiledHeader />
     </ClCompile>
     <ClCompile Include="File.c" />
-    <ClCompile Include="Injection.c" />
     <ClCompile Include="Loader.c" />
     <ClCompile Include="Privilege.c" />
     <ClCompile Include="Registry.c" />

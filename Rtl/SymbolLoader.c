@@ -111,6 +111,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "InjectionInline.h"
 
 _Use_decl_annotations_
 BOOL

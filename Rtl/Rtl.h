@@ -2639,8 +2639,6 @@ BOOL
     );
 typedef CREATE_SINGLE_RANDOM_OBJECT_NAME *PCREATE_SINGLE_RANDOM_OBJECT_NAME;
 
-#include "Injection.h"
-
 //
 // Miscellaneous NT/Rtl.
 //
@@ -5840,6 +5838,7 @@ typedef INITIALIZE_COM *PINITIALIZE_COM;
 
 typedef
 _Check_return_
+HRESULT
 (STDAPICALLTYPE DLL_GET_CLASS_OBJECT)(
     _In_ REFCLSID rclsid,
     _In_ REFIID riid,
@@ -5849,6 +5848,7 @@ typedef DLL_GET_CLASS_OBJECT *PDLL_GET_CLASS_OBJECT;
 
 typedef
 __control_entrypoint(DllExport)
+HRESULT
 (STDAPICALLTYPE DLL_CAN_UNLOAD_NOW)(
     VOID
     );
@@ -6006,6 +6006,7 @@ extern RUNDOWN_GLOBAL_ATEXIT_FUNCTIONS RundownGlobalAtExitFunctions;
 typedef
 _Check_return_
 _Success_(return != 0)
+BOOL
 (CALLBACK RTL_CREATE_NAMED_EVENT)(
     _In_ PRTL Rtl,
     _In_ PALLOCATOR Allocator,
@@ -6022,6 +6023,7 @@ typedef RTL_CREATE_NAMED_EVENT *PRTL_CREATE_NAMED_EVENT;
 typedef
 _Check_return_
 _Success_(return != 0)
+BOOL
 (CALLBACK PROBE_FOR_READ)(
     _In_ PRTL Rtl,
     _In_reads_(ROUND_TO_PAGES(NumberOfBytes)) PVOID Address,
@@ -6059,14 +6061,7 @@ typedef VIRTUAL_ALLOC_EX *PVIRTUAL_ALLOC_EX;
 
 typedef
 _Check_return_
-_Success_(return != 0)
-(CALLBACK INITIALIZE_INJECTION)(
-    _In_ struct _RTL *Rtl
-    );
-typedef INITIALIZE_INJECTION *PINITIALIZE_INJECTION;
-
-typedef
-_Check_return_
+BOOL
 _Success_(return != 0)
 (GET_CU)(
     _Inout_ PRTL Rtl,
@@ -6203,13 +6198,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _RTL {
     PCOPY_FUNCTION CopyFunction;
     PCREATE_RANDOM_OBJECT_NAMES CreateRandomObjectNames;
     PCREATE_SINGLE_RANDOM_OBJECT_NAME CreateSingleRandomObjectName;
-
-    PVOID InjectionThunkRoutine;
-    PINJECT Inject;
-    PINITIALIZE_INJECTION InitializeInjection;
-    PADJUST_THUNK_POINTERS AdjustThunkPointers;
-
-    INJECTION_FUNCTIONS InjectionFunctions;
 
     union {
         SYSTEM_TIMER_FUNCTION   SystemTimerFunction;
@@ -8135,7 +8123,7 @@ Error:
         // Try free the underlying buffer.
         //
 
-        Allocator->FreePointer(Allocator->Context, &Utf16);
+        Allocator->FreePointer(Allocator->Context, (PPVOID)&Utf16);
     }
 
     return FALSE;
@@ -9386,8 +9374,6 @@ RTL_API APPEND_TAIL_GUARDED_LIST_TSX AppendTailGuardedListTsx;
 // of the implementation body in the relevant .c file.
 //
 
-#pragma component(browser, off)
-
 RTL_API
 LONG
 CompareStringCaseInsensitive(
@@ -9539,8 +9525,6 @@ RTL_API UNREGISTER_DLL_NOTIFICATION UnregisterDllNotification;
 RTL_API UNREGISTER_RTL_ATEXIT_ENTRY UnregisterRtlAtExitEntry;
 RTL_API WRITE_ENV_VAR_TO_REGISTRY WriteEnvVarToRegistry;
 RTL_API WRITE_REGISTRY_STRING WriteRegistryString;
-
-#pragma component(browser, on)
 
 #ifdef __cplusplus
 } // extern "C"
