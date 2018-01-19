@@ -184,7 +184,7 @@ typedef struct _CHARACTER_BITMAP {
         //
         // Leverage the fact that we get a free ULONG slot between SizeOfBitMap
         // and Buffer on x64 (due to the latter needing to be 8-byte aligned)
-        // and stash a 32-bit hash for the underlying bitmap value.  This is 
+        // and stash a 32-bit hash for the underlying bitmap value.  This is
         // useful during debugging.  (Currently, CRC-32 is used.)
         //
 
