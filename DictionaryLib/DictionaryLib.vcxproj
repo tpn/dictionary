@@ -70,7 +70,7 @@
       <AdditionalDependencies>TracerHeapLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
-      <PreprocessorDefinitions>_DICTIONARY_INTERNAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DICTIONARY_INTERNAL_BUILD;_DICTIONARY_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
