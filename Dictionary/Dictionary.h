@@ -62,6 +62,10 @@ Abstract:
 
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "../Rtl/Rtl.h"
 
 #endif
@@ -199,6 +203,16 @@ typedef struct _CHARACTER_BITMAP {
 } CHARACTER_BITMAP;
 typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
 
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_CHARACTER_BITMAP_FOR_STRING)(
+    _In_ PCLONG_STRING String,
+    _Outptr_result_nullonfailure_ PCHARACTER_BITMAP Bitmap
+    );
+typedef CREATE_CHARACTER_BITMAP_FOR_STRING
+      *PCREATE_CHARACTER_BITMAP_FOR_STRING;
+
 FORCEINLINE
 _Success_(return != 0)
 BOOLEAN
@@ -275,18 +289,29 @@ CreateCharacterBitmapForStringInline(
 // Define character histogram structure and supporting functions.
 //
 
-typedef struct _CHARACTER_FREQUENCY_HISTOGRAM {
+typedef struct _CHARACTER_HISTOGRAM {
     DECLSPEC_ALIGN(256) ULONG CharacterCounts[NUMBER_OF_CHARACTER_BITS];
-} CHARACTER_FREQUENCY_HISTOGRAM;
-typedef CHARACTER_FREQUENCY_HISTOGRAM *PCHARACTER_FREQUENCY_HISTOGRAM;
+} CHARACTER_HISTOGRAM;
+typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32)(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram,
+    _Outptr_opt_result_nullonfailure_ PULONG Hash32Pointer
+    );
+typedef CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32
+      *PCREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32;
 
 FORCEINLINE
 _Success_(return != 0)
 BOOLEAN
-CreateCharacterFrequencyHistogramForStringInline(
+CreateCharacterHistogramForStringHash32Inline(
     _In_ PCLONG_STRING String,
-    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_FREQUENCY_HISTOGRAM Histogram,
-    _Outptr_opt_result_nullonfailure_ PULONG HashPointer
+    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram,
+    _Outptr_opt_result_nullonfailure_ PULONG Hash32Pointer
     )
 {
     BYTE Byte;
@@ -346,7 +371,7 @@ CreateCharacterFrequencyHistogramForStringInline(
     // Calculate the CRC32 hash if the user has provided a valid HashPointer.
     //
 
-    if (ARGUMENT_PRESENT(HashPointer)) {
+    if (ARGUMENT_PRESENT(Hash32Pointer)) {
 
         Hash = Length;
         for (Index = 0; Index < NUMBER_OF_CHARACTER_BITS; Index += 4) {
@@ -360,7 +385,121 @@ CreateCharacterFrequencyHistogramForStringInline(
         // Update the caller's pointer.
         //
 
-        *HashPointer = Hash;
+        *Hash32Pointer = Hash;
+
+    }
+
+    //
+    // Return success.
+    //
+
+    return TRUE;
+};
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH64)(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram,
+    _Outptr_opt_result_nullonfailure_ PULONGLONG Hash64Pointer
+    );
+
+FORCEINLINE
+_Success_(return != 0)
+BOOLEAN
+CreateCharacterHistogramForStringHash64Inline(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram,
+    _Outptr_opt_result_nullonfailure_ PULONGLONG Hash64Pointer
+    )
+{
+    BYTE Byte;
+    ULONG Index;
+    ULONG Length;
+    PBYTE Buffer;
+    PULONG Counts;
+    ULONGLONG Hash;
+
+    //
+    // Verify arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(String)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(Histogram)) {
+        return FALSE;
+    }
+
+    if (!IsAligned(Histogram, 256)) {
+
+        //
+        // Once we start using AVX2 instrinsics, change this NOTHING
+        // into a trap.
+        //
+
+        NOTHING;
+    }
+
+    //
+    // Zero all of the counts.
+    //
+
+    ZeroStructPointer(Histogram);
+
+    //
+    // Initialize variables.
+    //
+
+    Length = String->Length;
+    Buffer = (PBYTE)String->Buffer;
+    Counts = (PULONG)&Histogram->CharacterCounts;
+
+    //
+    // Iterate over each byte in the string and increment its corresponding
+    // count in the histogram.
+    //
+
+    for (Index = 0; Index < Length; Index++) {
+        Byte = Buffer[Index];
+        Counts[Byte]++;
+    }
+
+    //
+    // Calculate the CRC32 hash if the user has provided a valid HashPointer.
+    //
+
+    if (ARGUMENT_PRESENT(Hash64Pointer)) {
+
+        ULARGE_INTEGER Quad1;
+        ULARGE_INTEGER Quad2;
+
+        Hash = Length;
+
+        for (Index = 0; Index < NUMBER_OF_CHARACTER_BITS; Index += 4) {
+
+            //
+            // Load four ULONGs into two ULARGE_INTEGERs, allowing us to use
+            // _mm_crc32_u64().
+            //
+
+            Quad1.LowPart  = Counts[Index+0];
+            Quad1.HighPart = Counts[Index+1];
+
+            Quad2.LowPart  = Counts[Index+2];
+            Quad2.HighPart = Counts[Index+3];
+
+            Hash = _mm_crc32_u64(Hash, Quad1.QuadPart);
+            Hash = _mm_crc32_u64(Hash, Quad2.QuadPart);
+        }
+
+        //
+        // Update the caller's pointer.
+        //
+
+        *Hash64Pointer = Hash;
 
     }
 
@@ -376,6 +515,21 @@ CreateCharacterFrequencyHistogramForStringInline(
 // API exports.
 //
 
-DICTIONARY_API CREATE_AND_INITIALIZE_DICTIONARY CreateAndInitializeDictionary;
+DICTIONARY_API CREATE_AND_INITIALIZE_DICTIONARY
+               CreateAndInitializeDictionary;
+
+DICTIONARY_API CREATE_CHARACTER_BITMAP_FOR_STRING
+               CreateCharacterBitmapForString;
+
+DICTIONARY_API CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH32
+               CreateCharacterHistogramForStringHash32;
+
+DICTIONARY_API CREATE_CHARACTER_HISTOGRAM_FOR_STRING_HASH64
+               CreateCharacterHistogramForStringHash64;
+
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
