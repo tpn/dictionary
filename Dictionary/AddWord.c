@@ -22,7 +22,7 @@ AddWord(
     PCLONG_STRING Word,
     PCWORD_ENTRY *WordEntryPointer,
     PULONGLONG EntryCount
-    )
+)
 /*++
 
 Routine Description:
@@ -41,6 +41,12 @@ Return Value:
 --*/
 {
     BOOL Success;
+    CHARACTER_BITMAP Bitmap;
+    CHARACTER_HISTOGRAM Histogram;
+    ULONG HistogramHash;
+    BOOLEAN NewEntry;
+    BITMAP_TABLE_ENTRY BitmapTableEntry;
+    BITMAP_TABLE_ENTRY_FULL BitmapTableEntryFull;
 
     //
     // Validate arguments.
@@ -54,7 +60,92 @@ Return Value:
         return FALSE;
     }
 
+    //
+    // Convert the incoming string into bitmap and histogram
+    // representations.
+    //
+
+    Success = CreateCharacterBitmapForString(Word, &Bitmap);
+    if (!Success) {
+        goto Error;
+    }
+
+    Success = CreateCharacterHistogramForStringHash32(
+        Word,
+        &Histogram,
+        &HistogramHash
+    );
+
+    if (!Success) {
+        goto Error;
+    }
+
+    //
+    // We've captured the bitmap and histogram primary keys used
+    // to identify the incoming word, plus a simple 32-bit hash
+    // value that we can use to perform quick identity checks on
+    // two incoming words as part of determining whether or not
+    // they're identical.
+    //
+    
+    ZeroStruct(BitmapTableEntryFull);
+
+    Entry->Hash = BitmapHash;
+    
+
+    Table = &Dictionary->BitmapTable.Avl;
+    
+    AcquireDictionaryLockExclusive(&Dictionary->Lock);
+    
+    BitmapTableEntry = Rtl->RtlInsertGenericTableAvl(
+        Table,
+        &BitmapTableEntry,
+        sizeof(BITMAP_TABLE_ENTRY),
+        &NewElement
+    );
+
+    ReleaseDictionaryLockExclusive(&Dictionary->Lock);
+
+    if (!BitmapTableEntry) {
+        __debugbreak();
+        goto Error;
+    }
+
+    //
+    // Existing entry matching this histogram hash has been found,
+    // or a new entry was created.  This will be indicated by the
+    // NewElement parameter.
+    //
+
+    if (NewElement) {
+
+        //
+        // Need to allocate an initialize the histogram table to
+        // be used as the second level lookup.
+        //
+
+        NOTHING;
+
+    } else {
+        
+        //
+        // Presume we'll need to do something useful here.
+        //
+
+        NOTHING;
+    }
+
+
+
+ Error:
+    
     Success = FALSE;
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
 
     return Success;
 }
