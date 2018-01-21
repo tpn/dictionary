@@ -23,6 +23,13 @@ Abstract:
 
 #include "stdafx.h"
 
+#ifndef ASSERT
+#define ASSERT(Condition)   \
+    if (!(Condition)) {     \
+        __debugbreak();     \
+    }
+#endif
+
 //
 // Use the slim R/W locks for the dictionary structure, as they pair nicely
 // with AVL tables, which don't splay during read-only operations (as opposed
@@ -44,6 +51,162 @@ typedef SRWLOCK DICTIONARY_LOCK;
 #define ReleaseDictionaryLockExclusive ReleaseSRWLockExclusive
 
 //
+// Define character bitmap and histogram structures and supporting function
+// typedefs.
+//
+
+#define NUMBER_OF_CHARACTER_BITS 256
+#define NUMBER_OF_CHARACTER_BITS_IN_BYTES (256 / 8)
+#define NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS (256 / (4 << 3))
+#define NUMBER_OF_CHARACTER_BITS_IN_QUADWORDS (256 / (8 << 3))
+
+typedef union DECLSPEC_ALIGN(32) _CHARACTER_BITMAP {
+     YMMWORD Ymm;
+     LONG Bits[NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS];
+} CHARACTER_BITMAP;
+typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
+typedef const CHARACTER_BITMAP *PCCHARACTER_BITMAP;
+
+typedef struct DECLSPEC_ALIGN(256) _CHARACTER_HISTOGRAM {
+    YMMWORD Ymm[32];
+    ULONG Counts[NUMBER_OF_CHARACTER_BITS];
+} CHARACTER_HISTOGRAM;
+typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
+typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI INITIALIZE_WORD)(
+    _In_z_ PCBYTE Word,
+    _In_ ULONG MinimumLength,
+    _In_ ULONG MaximumLength,
+    _Inout_ PLONG_STRING String,
+    _Inout_ PCHARACTER_BITMAP Bitmap,
+    _Inout_ PCHARACTER_HISTOGRAM Histogram,
+    _Out_ PULONG BitmapHashPointer,
+    _Out_ PULONG HistogramHashPointer
+    );
+typedef INITIALIZE_WORD *PINITIALIZE_WORD;
+extern INITIALIZE_WORD InitializeWord;
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI COMPARE_CHARACTER_HISTOGRAMS)(
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Left,
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Right
+    );
+typedef COMPARE_CHARACTER_HISTOGRAMS *PCOMPARE_CHARACTER_HISTOGRAMS;
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI CONFIRM_GENERIC_EQUAL)(
+    PRTL_AVL_TABLE Table,
+    PVOID FirstStruct,
+    PVOID SecondStruct
+    );
+
+
+//
+// Define the word table.  This is the third and final tier of the dictionary's
+// data structure hierarchy.  Each entry is keyed by the underlying LONG_STRING
+// representing the given word.
+//
+
+typedef struct _WORD_TABLE {
+    RTL_AVL_TABLE Avl;
+    LIST_ENTRY AnagramListHead;
+} WORD_TABLE;
+typedef WORD_TABLE *PWORD_TABLE;
+
+typedef struct _WORD_TABLE_ENTRY {
+    struct _LENGTH_TABLE_ENTRY *LengthEntry;
+    WORD_ENTRY WordEntry;
+} WORD_TABLE_ENTRY;
+typedef WORD_TABLE_ENTRY *PWORD_TABLE_ENTRY;
+
+typedef struct _WORD_TABLE_ENTRY_FULL {
+
+    union {
+
+        //
+        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
+        // of the structure normally used for padding for our hash.
+        //
+
+        struct {
+
+            struct _RTL_BALANCED_LINKS *Parent;
+            struct _RTL_BALANCED_LINKS *LeftChild;
+            struct _RTL_BALANCED_LINKS *RightChild;
+            CHAR Balance;
+            UCHAR Reserved[3];
+
+            //
+            // Stash the hash of the word here. for the bitmap here.
+            //
+
+            ULONG Hash;
+        };
+
+        RTL_BALANCED_LINKS BalancedLinks;
+    };
+
+    WORD_TABLE_ENTRY Entry;
+    struct _LENGTH_TABLE_ENTRY *LengthEntry;
+
+} WORD_TABLE_ENTRY_FULL;
+typedef WORD_TABLE_ENTRY_FULL *PWORD_TABLE_ENTRY_FULL;
+
+//
+// Define the length table.
+//
+
+typedef struct _LENGTH_TABLE {
+    RTL_AVL_TABLE Avl;
+} LENGTH_TABLE;
+typedef LENGTH_TABLE *PLENGTH_TABLE;
+
+typedef struct _LENGTH_TABLE_ENTRY {
+    LIST_ENTRY LengthListEntry;
+    PWORD_ENTRY WordEntry;
+} LENGTH_TABLE_ENTRY;
+typedef LENGTH_TABLE_ENTRY *PLENGTH_TABLE_ENTRY;
+
+typedef struct _LENGTH_TABLE_ENTRY_FULL {
+
+    union {
+
+        //
+        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
+        // of the structure normally used for padding for our hash.
+        //
+
+        struct {
+
+            struct _RTL_BALANCED_LINKS *Parent;
+            struct _RTL_BALANCED_LINKS *LeftChild;
+            struct _RTL_BALANCED_LINKS *RightChild;
+            CHAR Balance;
+            UCHAR Reserved[3];
+
+            //
+            // Stash the word length here.
+            //
+
+            ULONG Length;
+        };
+
+        RTL_BALANCED_LINKS BalancedLinks;
+    };
+
+    LENGTH_TABLE_ENTRY Entry;
+
+} LENGTH_TABLE_ENTRY_FULL;
+typedef LENGTH_TABLE_ENTRY_FULL *PLENGTH_TABLE_ENTRY_FULL;
+
+
+//
 // Define the histogram table.  This is the second tier of the dictionary's
 // data structure hierarchy.  Each entry is uniquely-keyed by a character
 // histogram for a given set of word entries.  (The histogram is essentially
@@ -58,32 +221,14 @@ typedef SRWLOCK DICTIONARY_LOCK;
 
 
 typedef struct _HISTOGRAM_TABLE {
-
-    //
-    // Embed the RTL_AVL_TABLE at the start of the structure.
-    //
-
-    _Guarded_by_(Lock)
-    RTL_AVL_TABLE AvlTable;
-
-    //
-    // Define the lock for the structure.
-    //
-
-    DICTIONARY_LOCK Lock;
-
+    RTL_AVL_TABLE Avl;
 } HISTOGRAM_TABLE;
 typedef HISTOGRAM_TABLE *PHISTOGRAM_TABLE;
 
 typedef struct _HISTOGRAM_TABLE_ENTRY {
-
-    //
-    // A guarded linked-list of word entries for this histogram.  This equates
-    // to a list of all anagrams for a given word entry.
-    //
-
-    GUARDED_LIST GuardedList;
-
+    CHARACTER_HISTOGRAM Histogram;
+    WORD_TABLE WordTable;
+    LIST_ENTRY AnagramListHead;
 } HISTOGRAM_TABLE_ENTRY;
 typedef HISTOGRAM_TABLE_ENTRY *PHISTOGRAM_TABLE_ENTRY;
 
@@ -105,7 +250,7 @@ typedef struct _HISTOGRAM_TABLE_ENTRY_FULL {
             UCHAR Reserved[3];
 
             //
-            // Stash the hash for the bitmap here.
+            // Stash the hash for the histogram here.
             //
 
             ULONG Hash;
@@ -132,26 +277,13 @@ typedef HISTOGRAM_TABLE_ENTRY_FULL *PHISTOGRAM_TABLE_ENTRY_FULL;
 //
 
 typedef struct _BITMAP_TABLE {
-
-    _Guarded_by_(Lock)
     RTL_AVL_TABLE Avl;
-
-    DICTIONARY_LOCK Lock;
-
 } BITMAP_TABLE;
 typedef BITMAP_TABLE *PBITMAP_TABLE;
 
 typedef struct _BITMAP_TABLE_ENTRY {
-
-    //
-    // Histogram AVL table and associated lock.
-    //
-
-    _Guarded_by_(Lock)
+    CHARACTER_BITMAP Bitmap;
     HISTOGRAM_TABLE HistogramTable;
-
-    DICTIONARY_LOCK Lock;
-
 } BITMAP_TABLE_ENTRY;
 typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
 
@@ -188,6 +320,52 @@ typedef struct _BITMAP_TABLE_ENTRY_FULL {
 typedef BITMAP_TABLE_ENTRY_FULL *PBITMAP_TABLE_ENTRY_FULL;
 
 //
+// Define a generic table entry structure.
+//
+
+typedef struct _TABLE_ENTRY_FULL {
+
+    union {
+
+        //
+        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
+        // of the structure normally used for padding for our hash.
+        //
+
+        struct {
+
+            struct _RTL_BALANCED_LINKS *Parent;
+            struct _RTL_BALANCED_LINKS *LeftChild;
+            struct _RTL_BALANCED_LINKS *RightChild;
+            CHAR Balance;
+            UCHAR Reserved[3];
+
+            //
+            // Stash the hash of the word here. for the bitmap here.
+            //
+
+            union {
+                ULONG Hash;
+                ULONG Value;
+                ULONG Length;
+            };
+        };
+
+        RTL_BALANCED_LINKS BalancedLinks;
+    };
+
+    union {
+        WORD_TABLE_ENTRY WordTableEntry;
+        LENGTH_TABLE_ENTRY LengthTableEntry;
+        BITMAP_TABLE_ENTRY BitmapTableEntry;
+        HISTOGRAM_TABLE_ENTRY HistogramTableEntry;
+    };
+
+} TABLE_ENTRY_FULL;
+typedef TABLE_ENTRY_FULL *PTABLE_ENTRY_FULL;
+
+
+//
 // Define the main DICTIONARY structure and supporting flags.
 //
 
@@ -205,6 +383,9 @@ typedef union _DICTIONARY_FLAGS {
     ULONG AsULong;
 } DICTIONARY_FLAGS;
 typedef DICTIONARY_FLAGS *PDICTIONARY_FLAGS;
+
+#define MINIMUM_WORD_LENGTH  1          // 1 byte
+#define MAXIMUM_WORD_LENGTH (1 << 20)   // 1 MB (1048576 bytes)
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _DICTIONARY {
 
@@ -227,31 +408,57 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _DICTIONARY {
     DICTIONARY_FLAGS Flags;
 
     //
+    // Minimum and maximum word lengths, in bytes.
+    //
+
+    ULONG MinimumWordLength;
+    ULONG MaximumWordLength;
+
+    //
     // Pointer to an initialized RTL structure.
     //
 
     PRTL Rtl;
 
     //
-    // Pointer to an initialized ALLOCATOR structure.  This will be used to
-    // satisfy allocation requests for AVL table entry nodes.
+    // Pointer to an initialized ALLOCATOR structure.
     //
 
     PALLOCATOR Allocator;
 
     //
-    // A lock guarding the AVL table.
+    // Pointers to individual table allocators.
+    //
+
+    PALLOCATOR BitmapTableAllocator;
+    PALLOCATOR HistogramTableAllocator;
+    PALLOCATOR WordTableAllocator;
+    PALLOCATOR LengthTableAllocator;
+
+    //
+    // Capture current longest and all-time longest word entries via the stats
+    // structure.
+    //
+
+    DICTIONARY_STATS Stats;
+
+    //
+    // A slim read/writer lock guarding the dictionary.
     //
 
     DICTIONARY_LOCK Lock;
 
     //
-    // An AVL table used for capturing the first level character bitmap entry
-    // nodes, keyed by the 32-bit hash of the bitmap.
+    // Top-level bitmap table.
     //
 
-    _Guarded_by_(Lock)
-    RTL_AVL_TABLE BitmapTable;
+    BITMAP_TABLE BitmapTable;
+
+    //
+    // Top-level word length table.
+    //
+
+    LENGTH_TABLE LengthTable;
 
 } DICTIONARY;
 typedef DICTIONARY *PDICTIONARY;
@@ -296,6 +503,14 @@ AVL_TABLE_FREE_ROUTINE BitmapTableFreeRoutine;
 AVL_TABLE_COMPARE_ROUTINE HistogramTableCompareRoutine;
 AVL_TABLE_ALLOCATE_ROUTINE HistogramTableAllocateRoutine;
 AVL_TABLE_FREE_ROUTINE HistogramTableFreeRoutine;
+
+AVL_TABLE_COMPARE_ROUTINE WordTableCompareRoutine;
+AVL_TABLE_ALLOCATE_ROUTINE WordTableAllocateRoutine;
+AVL_TABLE_FREE_ROUTINE WordTableFreeRoutine;
+
+AVL_TABLE_COMPARE_ROUTINE LengthTableCompareRoutine;
+AVL_TABLE_ALLOCATE_ROUTINE LengthTableAllocateRoutine;
+AVL_TABLE_FREE_ROUTINE LengthTableFreeRoutine;
 
 //
 // TLS-related structures and functions.
