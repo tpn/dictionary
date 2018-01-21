@@ -56,9 +56,28 @@ A dictionary component with anagram support.
 
     Hours: 7.17 (3.07, 1.33, 2.77)
 
-## Day 3 TODO
+## Day 3
 
-    Implement AddWord, FindWord, DeleteWord, GetAnagrams, GetWordStats and
-    GetDictionaryStats.
+1. Revamp public/private split of interface.
+2. Flush out main body of AddWord().
+3. Move the bitmap and histogram functions into a single InitializeWord()
+   function.
+4. Extend CreateDictionary() and flush out initial DestroyDictionary().
+5. Update scratch.exe and unit tests.
+6. Introduce single 'Tables.c' module that contains the AVL-specific glue.
+
+Sent Omar a query regarding two things:
+
+a) Should a word's maximum count persist past the word's complete removal from
+the directory?
+
+b) Confirm that if the current maximum length word is deleted, the dictionary is
+expected to update its internal state such that the next longest word length is
+promoted to longest.
+
+The latter is a subtle detail I only caught today.  I'm implementing the
+functionality via (yet another) AVL table; one specifically for word lengths.
+
+    Hours: 11.08 (2.6, 3.27, 2.05, 3.17)
 
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
