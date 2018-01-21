@@ -134,6 +134,79 @@ namespace TestDictionary
             );
         }
 
+        TEST_METHOD(AddWord1)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             "elbow",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordDuplicate1)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             "elbow",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             "elbow",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
     };
 }
 
