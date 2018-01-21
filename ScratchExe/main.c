@@ -15,84 +15,47 @@ Abstract:
 #include "stdafx.h"
 #include "../Dictionary/Dictionary.h"
 
-VOID
-Scratch1(
-    PRTL Rtl,
-    PDICTIONARY Dictionary
-    )
-{
-    BOOLEAN Success;
-    ULONG FooHistogramHash;
-    ULONG OofHistogramHash;
-    CHARACTER_BITMAP FooBitmap;
-    CHARACTER_BITMAP OofBitmap;
-    CHARACTER_HISTOGRAM FooHistogram;
-    CHARACTER_HISTOGRAM OofHistogram;
-    LONG_STRING Foo = CONSTANT_LONG_STRING("foo");
-    LONG_STRING Oof = CONSTANT_LONG_STRING("oof");
+DICTIONARY_FUNCTIONS GlobalApi;
+PDICTIONARY_FUNCTIONS Api;
 
-    Success = CreateCharacterBitmapForStringInline(&Foo, &FooBitmap);
-    if (!Success) {
-        __debugbreak();
-        return;
-    }
-
-    Success = CreateCharacterBitmapForStringInline(&Oof, &OofBitmap);
-    if (!Success) {
-        __debugbreak();
-        return;
-    }
-
-    if (FooBitmap.Hash != OofBitmap.Hash) {
-        __debugbreak();
-        return;
-    }
-
-    Success =
-        CreateCharacterHistogramForStringHash32Inline(
-            &Foo,
-            &FooHistogram,
-            &FooHistogramHash
-            );
-
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success =
-        CreateCharacterHistogramForStringHash32Inline(
-            &Oof,
-            &OofHistogram,
-            &OofHistogramHash
-            );
-
-    if (!Success) {
-        __debugbreak();
-    }
-
-    if (FooHistogramHash != OofHistogramHash) {
-        __debugbreak();
-    }
-
-    return;
-}
+HMODULE GlobalModule = 0;
 
 VOID
 Scratch2(
     PRTL Rtl,
-    PALLOCATOR Allocator
+    PALLOCATOR Allocator,
+    PDICTIONARY_FUNCTIONS Api
     )
 {
     BOOLEAN Success;
     DICTIONARY_CREATE_FLAGS CreateFlags;
     PDICTIONARY Dictionary;
+    BOOLEAN IsProcessTerminating;
+    PWORD_ENTRY WordEntry;
+    LONGLONG EntryCount;
 
     CreateFlags.AsULong = 0;
+    IsProcessTerminating = FALSE;
 
-    Success = CreateAndInitializeDictionary(Rtl,
-                                            Allocator,
-                                            CreateFlags,
-                                            &Dictionary);
+    Success = Api->CreateDictionary(Rtl,
+                                    Allocator,
+                                    CreateFlags,
+                                    &Dictionary);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->AddWord(Dictionary,
+                           "elbow",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->DestroyDictionary(&Dictionary, &IsProcessTerminating);
 
     if (!Success) {
         __debugbreak();
@@ -100,7 +63,6 @@ Scratch2(
 
     return;
 }
-
 
 DECLSPEC_NORETURN
 VOID
@@ -132,9 +94,20 @@ mainCRTStartup()
         "CreateAndInitializeTracerConfigAndRtl()"
     );
 
+    CHECKED_MSG(
+        LoadDictionaryModule(
+            Rtl,
+            &GlobalModule,
+            &GlobalApi
+        ),
+        "LoadDictionaryModule"
+    );
+
+    Api = &GlobalApi;
+
     // Scratch1();
 
-    Scratch2(Rtl, &Allocator);
+    Scratch2(Rtl, &Allocator, Api);
 
 Error:
 
