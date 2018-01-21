@@ -76,7 +76,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>TracerHeapLib.lib;TracerConfigLib.lib;DictionaryLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TracerHeapLib.lib;kernel32.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

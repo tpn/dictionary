@@ -15,6 +15,12 @@ Abstract:
 #include "stdafx.h"
 #include "../Dictionary/Dictionary.h"
 
+RTL GlobalRtl;
+ALLOCATOR GlobalAllocator;
+
+PRTL Rtl;
+PALLOCATOR Allocator;
+
 DICTIONARY_FUNCTIONS GlobalApi;
 PDICTIONARY_FUNCTIONS Api;
 
@@ -70,29 +76,27 @@ WINAPI
 mainCRTStartup()
 {
     LONG ExitCode = 0;
-
-    PRTL Rtl;
-    PTRACER_CONFIG TracerConfig;
-    ALLOCATOR Allocator;
+    LONG SizeOfRtl = sizeof(GlobalRtl);
+    HMODULE RtlModule = LoadLibraryA("Rtl.dll");
+    PROC Proc = GetProcAddress(RtlModule, "InitializeRtl");
+    PINITIALIZE_RTL InitializeRtl = (PINITIALIZE_RTL)Proc;
 
     //
     // Initialization glue for our allocator, config, rtl and dictionary.
     //
 
-    if (!DefaultHeapInitializeAllocator(&Allocator)) {
+    if (!DefaultHeapInitializeAllocator(&GlobalAllocator)) {
         ExitCode = 1;
         goto Error;
     }
 
     CHECKED_MSG(
-        CreateAndInitializeTracerConfigAndRtl(
-            &Allocator,
-            (PUNICODE_STRING)&TracerRegistryPath,
-            &TracerConfig,
-            &Rtl
-        ),
-        "CreateAndInitializeTracerConfigAndRtl()"
+        InitializeRtl(&GlobalRtl, &SizeOfRtl),
+        "InitializeRtl()"
     );
+
+    Rtl = &GlobalRtl;
+    Allocator = &GlobalAllocator;
 
     CHECKED_MSG(
         LoadDictionaryModule(
@@ -107,7 +111,7 @@ mainCRTStartup()
 
     // Scratch1();
 
-    Scratch2(Rtl, &Allocator, Api);
+    Scratch2(Rtl, Allocator, Api);
 
 Error:
 
