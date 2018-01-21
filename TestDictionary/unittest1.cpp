@@ -75,6 +75,11 @@ ALLOCATOR GlobalAllocator;
 PRTL Rtl;
 PALLOCATOR Allocator;
 
+DICTIONARY_FUNCTIONS GlobalApi;
+PDICTIONARY_FUNCTIONS Api;
+
+HMODULE GlobalModule = 0;
+
 TEST_MODULE_INITIALIZE(UnitTest1Init)
 {
     ULONG SizeOfRtl = sizeof(GlobalRtl);
@@ -84,6 +89,19 @@ TEST_MODULE_INITIALIZE(UnitTest1Init)
 
     Rtl = &GlobalRtl;
     Allocator = &GlobalAllocator;
+
+    Assert::IsTrue(LoadDictionaryModule(Rtl,
+                                        &GlobalModule,
+                                        &GlobalApi));
+
+    Api = &GlobalApi;
+}
+
+TEST_MODULE_CLEANUP(UnitTest1Cleanup)
+{
+    if (GlobalModule != 0) {
+        FreeLibrary(GlobalModule);
+    }
 }
 
 namespace TestDictionary
@@ -92,37 +110,28 @@ namespace TestDictionary
     {
     public:
 
-        TEST_METHOD(TestMethod1)
+        TEST_METHOD(CreateAndDestroy1)
         {
-            STRING_DECL(Elbow);
-            STRING_DECL(Below);
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
 
-            MAKE_BITMAP(Elbow);
-            MAKE_BITMAP(Below);
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
 
-            Assert::AreEqual(ElbowBitmap.Hash, BelowBitmap.Hash);
-        }
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
 
-        TEST_METHOD(TestMethod2)
-        {
-            STRING_DECL(Elbow);
-            STRING_DECL(Below);
-
-            MAKE_HISTOGRAM_HASH32(Elbow);
-            MAKE_HISTOGRAM_HASH32(Below);
-
-            Assert::AreEqual(ElbowHistogramHash32, BelowHistogramHash32);
-        }
-
-        TEST_METHOD(TestMethod3)
-        {
-            STRING_DECL(Elbow);
-            STRING_DECL(Below);
-
-            MAKE_HISTOGRAM_HASH64(Elbow);
-            MAKE_HISTOGRAM_HASH64(Below);
-
-            Assert::AreEqual(ElbowHistogramHash64, BelowHistogramHash64);
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
         }
 
     };
