@@ -5423,7 +5423,8 @@ BOOL
     _In_ BOOL SkipJumpInstructions,
     _Out_ PULONG NumberOfResolvedSymbolsPointer
     );
-typedef LOAD_SYMBOLS *PLOAD_SYMBOLS;
+typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES
+      *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
 
 typedef union _LOAD_FILE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
@@ -6198,6 +6199,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _RTL {
     PCOPY_FUNCTION CopyFunction;
     PCREATE_RANDOM_OBJECT_NAMES CreateRandomObjectNames;
     PCREATE_SINGLE_RANDOM_OBJECT_NAME CreateSingleRandomObjectName;
+
+    PLOAD_SYMBOLS LoadSymbols;
+    PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
 
     union {
         SYSTEM_TIMER_FUNCTION   SystemTimerFunction;

@@ -3822,6 +3822,9 @@ InitializeRtl(
     Rtl->CreateRandomObjectNames = CreateRandomObjectNames;
     Rtl->CreateSingleRandomObjectName = CreateSingleRandomObjectName;
 
+    Rtl->LoadSymbols = LoadSymbols;
+    Rtl->LoadSymbolsFromMultipleModules = LoadSymbolsFromMultipleModules;
+
 #ifdef _RTL_TEST
     Rtl->TestLoadSymbols = TestLoadSymbols;
     Rtl->TestLoadSymbolsFromMultipleModules = (
