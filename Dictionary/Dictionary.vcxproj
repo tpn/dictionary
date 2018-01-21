@@ -81,16 +81,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AddWord.c" />
-    <ClCompile Include="BitmapTable.c" />
     <ClCompile Include="DictionaryTls.c" />
     <ClCompile Include="FindWord.c" />
-    <ClCompile Include="HistogramTable.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Rtl\__C_specific_handler.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Dictionary.c" />
+    <ClCompile Include="Tables.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

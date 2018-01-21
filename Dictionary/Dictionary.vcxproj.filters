@@ -44,16 +44,13 @@
     <ClCompile Include="DictionaryTls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BitmapTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HistogramTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AddWord.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FindWord.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Tables.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
