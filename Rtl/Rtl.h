@@ -2738,25 +2738,6 @@ typedef PRTL_SPLAY_LINKS (NTAPI PRTL_SPLAY)(
 // Generic Tables
 //
 
-typedef struct _TABLE_ENTRY_HEADER {
-    RTL_SPLAY_LINKS SplayLinks;
-    LIST_ENTRY ListEntry;
-    LONGLONG UserData;
-} TABLE_ENTRY_HEADER, *PTABLE_ENTRY_HEADER;
-C_ASSERT(sizeof(TABLE_ENTRY_HEADER) == 48);
-
-//
-// _HEADER_HEADER is a terrible name for something, unless you're dealing with
-// the header of a header, which is what we're dealing with here.
-//
-
-typedef struct _TABLE_ENTRY_HEADER_HEADER {
-
-    RTL_SPLAY_LINKS SplayLinks;
-    LIST_ENTRY ListEntry;
-
-} TABLE_ENTRY_HEADER_HEADER, *PTABLE_ENTRY_HEADER_HEADER;
-
 typedef enum _TABLE_SEARCH_RESULT {
     TableEmptyTree,
     TableFoundNode,
