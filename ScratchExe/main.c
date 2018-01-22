@@ -96,6 +96,25 @@ Scratch2(
         __debugbreak();
     }
 
+    Success = Api->AddWord(Dictionary,
+                           "The quick brown fox jumped over the lazy dog.",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->AddWord(Dictionary,
+                           "The quick brown fox jumped over the lazy dog.",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+
 
     Success = Api->DestroyDictionary(&Dictionary, &IsProcessTerminating);
 

@@ -179,13 +179,13 @@ typedef struct _DICTIONARY_STATS {
     // Current longest word in the dictionary.
     //
 
-    WORD_ENTRY CurrentLongestWord;
+    PCLONG_STRING CurrentLongestWord;
 
     //
     // Longest word of all time ever entered into the dictionary.
     //
 
-    WORD_ENTRY LongestWordAllTime;
+    PCLONG_STRING LongestWordAllTime;
 
 } DICTIONARY_STATS;
 typedef DICTIONARY_STATS *PDICTIONARY_STATS;
