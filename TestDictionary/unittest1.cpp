@@ -484,6 +484,63 @@ namespace TestDictionary
             );
         }
 
+        TEST_METHOD(GetDictionaryStats1)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            PDICTIONARY_STATS Stats;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+
+            BOOLEAN IsProcessTerminating;
+
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             Elbow.Buffer,
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(
+                Api->GetDictionaryStats(Dictionary,
+                                        Allocator,
+                                        &Stats)
+            );
+
+            Comparison = Api->CompareWords(Stats->CurrentLongestWord,
+                                           &WordEntry->String);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+            Comparison = Api->CompareWords(Stats->LongestWordAllTime,
+                                           &WordEntry->String);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+            Allocator->FreePointer(Allocator, (PPVOID)&Stats);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
     };
 }
 

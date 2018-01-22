@@ -83,6 +83,7 @@
     <ClCompile Include="AddWord.c" />
     <ClCompile Include="DictionaryTls.c" />
     <ClCompile Include="FindWord.c" />
+    <ClCompile Include="RemoveWord.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

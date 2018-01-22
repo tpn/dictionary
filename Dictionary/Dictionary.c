@@ -327,6 +327,281 @@ End:
     return Success;
 }
 
+_Use_decl_annotations_
+BOOLEAN
+GetDictionaryStats(
+    PDICTIONARY Dictionary,
+    PALLOCATOR Allocator,
+    PDICTIONARY_STATS *DictionaryStatsPointer
+    )
+/*++
+
+Routine Description:
+
+    Gets the dictionary statistics.
+
+Arguments:
+
+    Dictionary - Supplies a pointer to the DICTIONARY structure for which the
+        statistics are to be obtained.
+
+    Allocator - Supplies a pointer to an ALLOCATOR structure that will be used
+        to allocate memory for the underlying dictionary statistics.
+
+    DictionaryStatsPointer - Supplies the address to a variable that will
+        receive the address of the dictionary statistics structure.  The
+        caller is responsible for freeing this address when finished via
+        the Allocator parameter passed in above.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+--*/
+{
+    PBYTE Buffer;
+    LARGE_INTEGER AllocSize;
+    PDICTIONARY_STATS Stats;
+    PCLONG_STRING CurrentLongestWord;
+    PCLONG_STRING LongestWordAllTime;
+    PLONG_STRING NewCurrentLongestWord;
+    PLONG_STRING NewLongestWordAllTime;
+    ULONG AlignedCurrentLongestWordBufferSize;
+    ULONG AlignedLongestWordAllTimeBufferSize;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Dictionary)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(Allocator)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(DictionaryStatsPointer)) {
+        return FALSE;
+    }
+
+    //
+    // Clear the caller's pointer up-front.
+    //
+
+    *DictionaryStatsPointer = NULL;
+
+    //
+    // Calculate allocation size required for the dictionary stats and all
+    // supporting structures and string buffers.  We do this up front such
+    // that we can dispatch a single allocation call to the allocator, which
+    // allows us to return a pointer to the user that can be subsequently
+    // freed with a single call, too.
+    //
+
+    AllocSize.QuadPart = (
+
+        //
+        // Account for the dictionary stats structure size..
+        //
+
+        sizeof(DICTIONARY_STATS)
+
+    );
+
+    //
+    // Account for the current longest word.
+    //
+
+    CurrentLongestWord = Dictionary->Stats.CurrentLongestWord;
+
+    if (CurrentLongestWord) {
+
+        AlignedCurrentLongestWordBufferSize = (
+            ALIGN_UP_POINTER(CurrentLongestWord->Length + 1)
+        );
+
+        AllocSize.QuadPart += (
+
+            //
+            // Account for the LONG_STRING structure size.
+            //
+
+            sizeof(LONG_STRING) +
+
+            //
+            // Account for the 8-byte aligned buffer size of the string,
+            // including the terminating NULL.
+            //
+
+            AlignedCurrentLongestWordBufferSize
+        );
+
+    }
+
+    //
+    // Account for the longest word of all time.
+    //
+
+    LongestWordAllTime = Dictionary->Stats.LongestWordAllTime;
+
+    if (LongestWordAllTime) {
+
+        AlignedLongestWordAllTimeBufferSize = (
+            ALIGN_UP_POINTER(LongestWordAllTime->Length + 1)
+        );
+
+        AllocSize.QuadPart += (
+
+            //
+            // Account for the LONG_STRING structure size.
+            //
+
+            sizeof(LONG_STRING) +
+
+            //
+            // Account for the 8-byte aligned buffer size of the string,
+            // including the terminating NULL.
+            //
+
+            AlignedLongestWordAllTimeBufferSize
+        );
+    }
+
+    //
+    // Sanity check our allocation size isn't over ULONG.
+    //
+
+    ASSERT(AllocSize.HighPart == 0);
+
+    //
+    // Allocate space.
+    //
+
+    Buffer = (PBYTE)Allocator->Calloc(Allocator, 1, AllocSize.LowPart);
+
+    if (!Buffer) {
+        return FALSE;
+    }
+
+    //
+    // Carve out the dictionary stats structure.
+    //
+
+    Stats = (PDICTIONARY_STATS)Buffer;
+    Buffer += sizeof(DICTIONARY_STATS);
+
+    if (CurrentLongestWord) {
+
+        //
+        // Carve out the underlying LONG_STRING structure.
+        //
+
+        NewCurrentLongestWord = (PLONG_STRING)Buffer;
+        Buffer += sizeof(LONG_STRING);
+
+        //
+        // Carve out the underlying string buffer.
+        //
+
+        NewCurrentLongestWord->Buffer = Buffer;
+        Buffer += AlignedCurrentLongestWordBufferSize;
+
+        //
+        // Copy the string buffer over.
+        //
+
+        CopyMemory(NewCurrentLongestWord->Buffer,
+                   CurrentLongestWord->Buffer,
+                   CurrentLongestWord->Length);
+
+        //
+        // Ensure the string is NULL terminated.  (Not technically necessary
+        // as the Calloc() call to the allocator should have zero'd all the
+        // memory for us.)
+        //
+
+        NewCurrentLongestWord->Buffer[CurrentLongestWord->Length] = '\0';
+
+        //
+        // Copy over the length and hash values.
+        //
+
+        NewCurrentLongestWord->Length = CurrentLongestWord->Length;
+        NewCurrentLongestWord->Hash = CurrentLongestWord->Hash;
+
+        //
+        // Wire it up to our new stats structure.
+        //
+
+        Stats->CurrentLongestWord = (PCLONG_STRING)NewCurrentLongestWord;
+    }
+
+    //
+    // Do the same for the longest all time word.
+    //
+
+    if (LongestWordAllTime) {
+
+        //
+        // Carve out the underlying LONG_STRING structure.
+        //
+
+        NewLongestWordAllTime = (PLONG_STRING)Buffer;
+        Buffer += sizeof(LONG_STRING);
+
+        //
+        // Carve out the underlying string buffer.
+        //
+
+        NewLongestWordAllTime->Buffer = Buffer;
+        Buffer += AlignedLongestWordAllTimeBufferSize;
+
+        //
+        // Copy the string buffer over.
+        //
+
+        CopyMemory(NewLongestWordAllTime->Buffer,
+                   LongestWordAllTime->Buffer,
+                   LongestWordAllTime->Length);
+
+        //
+        // Ensure the string is NULL terminated.  (Not technically necessary
+        // as the Calloc() call to the allocator should have zero'd all the
+        // memory for us.)
+        //
+
+        NewLongestWordAllTime->Buffer[LongestWordAllTime->Length] = '\0';
+
+        //
+        // Copy over the length and hash values.
+        //
+
+        NewLongestWordAllTime->Length = LongestWordAllTime->Length;
+        NewLongestWordAllTime->Hash = LongestWordAllTime->Hash;
+
+        //
+        // Wire it up to our new stats structure.
+        //
+
+        Stats->LongestWordAllTime = (PCLONG_STRING)NewLongestWordAllTime;
+    }
+
+    //
+    // Sanity check our buffer address.
+    //
+
+    ASSERT(Buffer = (PBYTE)RtlOffsetToPointer(Stats, AllocSize.LowPart));
+
+    //
+    // Update the caller's pointer and return success.
+    //
+
+    *DictionaryStatsPointer = Stats;
+
+    return TRUE;
+}
+
 //
 // Helper functions for setting minimum and maximum length values.
 //
