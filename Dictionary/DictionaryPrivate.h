@@ -291,6 +291,41 @@ typedef struct _BITMAP_TABLE_ENTRY {
 typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
 
 //
+// The default dictionary minimum and maximum word lengths are 1 byte and
+// 1MB, respectively.  There's an absolute maximum word length of 16MB, which
+// has to do with the fact that our histogram character count is limited to
+// 24-bits during hashing (as the 8-bit index forms the rest of the ULONG).
+// See comment below regarding the HASH structure for more information.
+//
+// Technically, this could be relaxed, the only impact would be the potential
+// for more hash collisions.
+//
+
+#define MINIMUM_WORD_LENGTH          (1      )  //  1 byte
+#define MAXIMUM_WORD_LENGTH          (1 << 20)  //  1 MB (1048576 bytes)
+#define ABSOLUTE_MAXIMUM_WORD_LENGTH (1 << 24)  // 16 MB (16777216 bytes)
+
+//
+// Define the helper union used for capturing index and value as a 32-bit
+// representation that can be passed into our hashing function.  As bitmaps
+// and histograms will frequently have values of 0 (because the character has
+// never been seen), including the ordinal of the character in the value being
+// hashed ensures we're not hashing 0 over and over (which in the case of our
+// currently implementation that uses CRC32, would have no effect on the hash).
+//
+
+typedef union _HASH {
+    struct {
+        ULONG Value:24;
+        ULONG Index:8;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} HASH;
+typedef HASH *PHASH;
+
+//
 // Define the main DICTIONARY structure and supporting flags.
 //
 
@@ -309,8 +344,6 @@ typedef union _DICTIONARY_FLAGS {
 } DICTIONARY_FLAGS;
 typedef DICTIONARY_FLAGS *PDICTIONARY_FLAGS;
 
-#define MINIMUM_WORD_LENGTH  1          // 1 byte
-#define MAXIMUM_WORD_LENGTH (1 << 20)   // 1 MB (1048576 bytes)
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _DICTIONARY {
 
