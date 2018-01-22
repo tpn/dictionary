@@ -72,26 +72,34 @@ MAKE_STRING(Elbow, "elbow");
 RTL GlobalRtl;
 ALLOCATOR GlobalAllocator;
 
+RTL_BOOTSTRAP GlobalBootstrap;
+PRTL_BOOTSTRAP Bootstrap;
+
 PRTL Rtl;
 PALLOCATOR Allocator;
 
 DICTIONARY_FUNCTIONS GlobalApi;
 PDICTIONARY_FUNCTIONS Api;
 
-HMODULE GlobalModule = 0;
+HMODULE GlobalRtlModule = 0;
+HMODULE GlobalDictionaryModule = 0;
 
 TEST_MODULE_INITIALIZE(UnitTest1Init)
 {
     ULONG SizeOfRtl = sizeof(GlobalRtl);
 
-    Assert::IsTrue(InitializeRtl(&GlobalRtl, &SizeOfRtl));
-    Assert::IsTrue(DefaultHeapInitializeAllocator(&GlobalAllocator));
+    Assert::IsTrue(BootstrapRtl(&GlobalRtlModule, &GlobalBootstrap));
+
+    Bootstrap = &GlobalBootstrap;
+
+    Assert::IsTrue(Bootstrap->InitializeRtl(&GlobalRtl, &SizeOfRtl));
+    Assert::IsTrue(Bootstrap->InitializeHeapAllocator(&GlobalAllocator));
 
     Rtl = &GlobalRtl;
     Allocator = &GlobalAllocator;
 
     Assert::IsTrue(LoadDictionaryModule(Rtl,
-                                        &GlobalModule,
+                                        &GlobalDictionaryModule,
                                         &GlobalApi));
 
     Api = &GlobalApi;
@@ -99,8 +107,12 @@ TEST_MODULE_INITIALIZE(UnitTest1Init)
 
 TEST_MODULE_CLEANUP(UnitTest1Cleanup)
 {
-    if (GlobalModule != 0) {
-        FreeLibrary(GlobalModule);
+    if (GlobalRtlModule != 0) {
+        FreeLibrary(GlobalRtlModule);
+    }
+
+    if (GlobalDictionaryModule != 0) {
+        FreeLibrary(GlobalDictionaryModule);
     }
 }
 
@@ -139,7 +151,7 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PWORD_ENTRY WordEntry;
+            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -154,7 +166,7 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             "elbow",
+                             Elbow.Buffer,
                              &WordEntry,
                              &EntryCount)
             );
@@ -172,7 +184,7 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PWORD_ENTRY WordEntry;
+            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -187,14 +199,14 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             "elbow",
+                             Elbow.Buffer,
                              &WordEntry,
                              &EntryCount)
             );
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             "elbow",
+                             Elbow.Buffer,
                              &WordEntry,
                              &EntryCount)
             );

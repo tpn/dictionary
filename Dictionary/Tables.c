@@ -26,32 +26,27 @@ RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 GenericTableCompareRoutine(
     PRTL_AVL_TABLE Table,
-    PVOID FirstStruct,
-    PVOID SecondStruct,
-    PAVL_TABLE_COMPARE_ROUTINE ConfirmGenericEqualRoutine
+    PVOID LeftEntry,
+    PVOID RightEntry
     )
 /*++
 
 Routine Description:
 
-    This routine is the generic table compare routine t
-    AVL table mechanics during search and insert operations.
+    This routine is the generic table compare routine for AVL tables used by
+    the dictionary.  It uses the spare ULONG embedded at the end of the struct
+    RTL_BALANCED_LINKS for the basis of the comparison.
 
 Arguments:
 
     Table - Supplies a pointer to the RTL_AVL_TABLE structure being used for
         the comparison.
 
-    FirstStruct - Supplies a pointer to the first table entry structure to be
-        used in the comparison.
+    LeftEntry - Supplies a pointer to the left table entry header structure to
+        be used in the comparison.
 
-    SecondStruct - Supplies a pointer to the second table entry structure to be
-        used in the comparison.
-
-    ConfirmGenericEqualRoutine - Optionally supplies a pointer to a routine
-        that will be called if the initial comparison indicates that the values
-        are equal.  This is used to perform a more expensive identity check
-        once we've established that two hash values match, for example.
+    RightEntry - Supplies a pointer to the right table entry header structure
+        to be used in the comparison.
 
 Return Value:
 
@@ -60,40 +55,29 @@ Return Value:
 
 --*/
 {
-    SHORT Offset = sizeof(RTL_BALANCED_LINKS);
+    PTABLE_ENTRY_HEADER Left;
+    PTABLE_ENTRY_HEADER Right;
     RTL_GENERIC_COMPARE_RESULTS Result;
 
-    PTABLE_ENTRY_FULL First;
-    PTABLE_ENTRY_FULL Second;
-
-    ULONG FirstValue;
-    ULONG SecondValue;
-
     //
-    // Cast input parameters to the appropriate types.
+    // Convert the table entries to their respective headers.
     //
 
-    First = (PTABLE_ENTRY_FULL)RtlOffsetToPointer(FirstStruct, -Offset);
-    Second = (PTABLE_ENTRY_FULL)RtlOffsetToPointer(SecondStruct, -Offset);
+    Left = TABLE_ENTRY_TO_HEADER(LeftEntry);
+    Right = TABLE_ENTRY_TO_HEADER(RightEntry);
 
-    FirstValue = First->Value;
-    SecondValue = Second->Value;
+    //
+    // A value of 0 for either the left or the right is usually indicative
+    // of an internal issue.
+    //
 
-    if (FirstValue == SecondValue) {
+    ASSERT(Left->Value != 0 && Right->Value != 0);
 
-        if (!ConfirmGenericEqualRoutine) {
+    if (Left->Value == Right->Value) {
 
-            Result = GenericEqual;
+        Result = GenericEqual;
 
-        } else {
-
-            Result = ConfirmGenericEqualRoutine(Table,
-                                                FirstStruct,
-                                                SecondStruct);
-
-        }
-
-    } else if (FirstValue < SecondValue) {
+    } else if (Left->Value < Right->Value) {
 
         Result = GenericLessThan;
 
@@ -137,7 +121,7 @@ Return Value:
 
 --*/
 {
-    return Allocator->Malloc(Allocator, ByteSize);
+    return Allocator->Calloc(Allocator, 1, ByteSize);
 }
 
 _Use_decl_annotations_
@@ -178,107 +162,6 @@ Return Value:
 }
 
 //
-// Table-specific confirmation routines for bitmaps and histograms.
-//
-
-
-RTL_GENERIC_COMPARE_RESULTS
-NTAPI
-BitmapConfirmEqualRoutine(
-    PRTL_AVL_TABLE Table,
-    PBITMAP_TABLE_ENTRY First,
-    PBITMAP_TABLE_ENTRY Second
-    )
-{
-    ULONG EqualMask;
-    ULONG GreaterThanMask;
-
-    YMMWORD FirstYmm;
-    YMMWORD SecondYmm;
-
-    YMMWORD EqualYmm;
-    YMMWORD GreaterThanYmm;
-
-    FirstYmm = _mm256_loadu_si256(&First->Bitmap.Ymm);
-    SecondYmm = _mm256_loadu_si256(&Second->Bitmap.Ymm);
-
-    EqualYmm = _mm256_cmpeq_epi32(FirstYmm, SecondYmm);
-    GreaterThanYmm = _mm256_cmpgt_epi32(FirstYmm, SecondYmm);
-
-    EqualMask = _mm256_movemask_epi8(EqualYmm);
-    GreaterThanMask = _mm256_movemask_epi8(GreaterThanYmm);
-
-    if (EqualMask == -1) {
-        return GenericEqual;
-    } else if (GreaterThanMask == -1) {
-        return GenericGreaterThan;
-    } else {
-        return GenericLessThan;
-    }
-
-}
-
-RTL_GENERIC_COMPARE_RESULTS
-NTAPI
-HistogramConfirmEqualRoutine(
-    PRTL_AVL_TABLE Table,
-    PHISTOGRAM_TABLE_ENTRY First,
-    PHISTOGRAM_TABLE_ENTRY Second
-    )
-{
-    BYTE Index;
-    BYTE Length;
-    LONG EqualMask;
-    LONG GreaterThanMask;
-
-    YMMWORD FirstYmm;
-    YMMWORD SecondYmm;
-
-    YMMWORD EqualYmm;
-    YMMWORD GreaterThanYmm;
-
-    Length = ARRAYSIZE(First->Histogram.Ymm);
-
-    for (Index = 0; Index < Length; Index++) {
-
-        FirstYmm = _mm256_loadu_si256(&First->Histogram.Ymm[Index]);
-        SecondYmm = _mm256_loadu_si256(&Second->Histogram.Ymm[Index]);
-
-        EqualYmm = _mm256_cmpeq_epi32(FirstYmm, SecondYmm);
-        EqualMask = _mm256_movemask_epi8(EqualYmm);
-
-        if (EqualMask == -1) {
-            continue;
-        }
-
-        GreaterThanYmm = _mm256_cmpgt_epi32(FirstYmm, SecondYmm);
-        GreaterThanMask = _mm256_movemask_epi8(GreaterThanYmm);
-
-        if (GreaterThanMask == -1) {
-            return GenericGreaterThan;
-        } else {
-            return GenericLessThan;
-        }
-    }
-
-    return GenericEqual;
-}
-
-RTL_GENERIC_COMPARE_RESULTS
-NTAPI
-WordConfirmEqualRoutine(
-    PRTL_AVL_TABLE Table,
-    PWORD_TABLE_ENTRY_FULL First,
-    PWORD_TABLE_ENTRY_FULL Second
-    )
-{
-    __debugbreak();
-    return GenericEqual;
-}
-
-
-
-//
 // Table-specific entry points for the three AVL routines.
 //
 
@@ -292,18 +175,11 @@ RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 BitmapTableCompareRoutine(
     PRTL_AVL_TABLE Table,
-    PVOID FirstStruct,
-    PVOID SecondStruct
+    PVOID LeftEntry,
+    PVOID RightEntry
     )
 {
-    PAVL_TABLE_COMPARE_ROUTINE ConfirmEqual;
-
-    ConfirmEqual = (PAVL_TABLE_COMPARE_ROUTINE)BitmapConfirmEqualRoutine;
-
-    return GenericTableCompareRoutine(Table,
-                                      FirstStruct,
-                                      SecondStruct,
-                                      ConfirmEqual);
+    return GenericTableCompareRoutine(Table, LeftEntry, RightEntry);
 }
 
 _Use_decl_annotations_
@@ -311,18 +187,11 @@ RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 HistogramTableCompareRoutine(
     PRTL_AVL_TABLE Table,
-    PVOID FirstStruct,
-    PVOID SecondStruct
+    PVOID LeftEntry,
+    PVOID RightEntry
     )
 {
-    PAVL_TABLE_COMPARE_ROUTINE ConfirmEqual;
-
-    ConfirmEqual = (PAVL_TABLE_COMPARE_ROUTINE)HistogramConfirmEqualRoutine;
-
-    return GenericTableCompareRoutine(Table,
-                                      FirstStruct,
-                                      SecondStruct,
-                                      ConfirmEqual);
+    return GenericTableCompareRoutine(Table, LeftEntry, RightEntry);
 }
 
 _Use_decl_annotations_
@@ -330,18 +199,64 @@ RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 WordTableCompareRoutine(
     PRTL_AVL_TABLE Table,
-    PVOID FirstStruct,
-    PVOID SecondStruct
+    PVOID LeftEntry,
+    PVOID RightEntry
     )
 {
-    PAVL_TABLE_COMPARE_ROUTINE ConfirmEqual;
+    PWORD_TABLE_ENTRY Left;
+    PWORD_TABLE_ENTRY Right;
+    PCLONG_STRING LeftString;
+    PCLONG_STRING RightString;
+    PTABLE_ENTRY_HEADER LeftHeader;
+    PTABLE_ENTRY_HEADER RightHeader;
+    PDICTIONARY_CONTEXT Context;
 
-    ConfirmEqual = (PAVL_TABLE_COMPARE_ROUTINE)WordConfirmEqualRoutine;
+    RTL_GENERIC_COMPARE_RESULTS Result;
 
-    return GenericTableCompareRoutine(Table,
-                                      FirstStruct,
-                                      SecondStruct,
-                                      ConfirmEqual);
+    //
+    // Convert the table entries to their respective headers.
+    //
+
+    LeftHeader = TABLE_ENTRY_TO_HEADER(LeftEntry);
+    RightHeader = TABLE_ENTRY_TO_HEADER(RightEntry);
+
+    Context = DictionaryTlsGetContext();
+
+    Result = GenericTableCompareRoutine(Table, LeftEntry, RightEntry);
+
+    if (Result == GenericEqual) {
+
+        //
+        // The hash values of the string match; resolve the underlying word
+        // entry structures and check the string lengths.  If they're also
+        // equal, compare the byte values.
+        //
+
+        Left = (PWORD_TABLE_ENTRY)LeftEntry;
+        Right = (PWORD_TABLE_ENTRY)RightEntry;
+
+        LeftString = &Left->WordEntry.String;
+        RightString = &Right->WordEntry.String;
+
+        if (LeftString->Length == RightString->Length) {
+
+            //
+            // Lengths also match.  Dispatch to the byte comparison routine.
+            //
+
+            Result = CompareWords(LeftString, RightString);
+
+        } else if (LeftString->Length < RightString->Length) {
+
+            Result = GenericLessThan;
+
+        } else {
+
+            Result = GenericGreaterThan;
+        }
+    }
+
+    return Result;
 }
 
 _Use_decl_annotations_
@@ -349,14 +264,11 @@ RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 LengthTableCompareRoutine(
     PRTL_AVL_TABLE Table,
-    PVOID FirstStruct,
-    PVOID SecondStruct
+    PVOID LeftEntry,
+    PVOID RightEntry
     )
 {
-    return GenericTableCompareRoutine(Table,
-                                      FirstStruct,
-                                      SecondStruct,
-                                      NULL);
+    return GenericTableCompareRoutine(Table, LeftEntry, RightEntry);
 }
 
 //
