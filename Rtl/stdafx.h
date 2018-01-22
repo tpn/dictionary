@@ -51,6 +51,7 @@ Abstract:
 #include "RtlConstants.h"
 #include "atexit.h"
 #include "AtExitEx.h"
+#include "HeapAllocatorPrivate.h"
 #include "RtlPrivate.h"
 #endif
 

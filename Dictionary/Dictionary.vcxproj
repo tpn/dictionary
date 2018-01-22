@@ -67,7 +67,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>TracerHeapLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
       <PreprocessorDefinitions>_DICTIONARY_INTERNAL_BUILD;_DICTIONARY_DLL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -90,6 +90,8 @@
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Dictionary.c" />
     <ClCompile Include="Tables.c" />
+    <ClCompile Include="Histogram.c" />
+    <ClCompile Include="Word.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

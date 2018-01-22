@@ -164,17 +164,6 @@
     </ClCompile>
     <ClCompile Include="unittest1.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Dictionary\Dictionary.vcxproj">
-      <Project>{b512054c-a17f-4e70-9ad2-1c79856ac0b1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Rtl\Rtl.vcxproj">
-      <Project>{91695ede-dfc2-4364-a959-3c8a0870507a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TracerHeap\TracerHeap.vcxproj">
-      <Project>{40a4b73f-f9aa-407a-91eb-5d2d092dcc30}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

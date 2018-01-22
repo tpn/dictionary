@@ -53,6 +53,12 @@
     <ClCompile Include="Tables.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Histogram.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Word.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>

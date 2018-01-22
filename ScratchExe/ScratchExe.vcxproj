@@ -71,12 +71,9 @@
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions>_TRACER_HEAP_STATIC_LIB;_TRACER_CONFIG_STATIC_LIB;_DICTIONARY_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>TracerHeapLib.lib;kernel32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

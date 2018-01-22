@@ -478,6 +478,7 @@ typedef LINKED_LINE **PPLINKED_LINE;
 #include "../Asm/Asm.h"
 #include "Time.h"
 #include "Memory.h"
+#include "HeapAllocator.h"
 #include "Commandline.h"
 
 typedef CONST char *PCSZ;
@@ -9510,6 +9511,84 @@ RTL_API UNREGISTER_DLL_NOTIFICATION UnregisterDllNotification;
 RTL_API UNREGISTER_RTL_ATEXIT_ENTRY UnregisterRtlAtExitEntry;
 RTL_API WRITE_ENV_VAR_TO_REGISTRY WriteEnvVarToRegistry;
 RTL_API WRITE_REGISTRY_STRING WriteRegistryString;
+
+//
+// Inline function for helping loading Rtl and the heap allocator routines.
+//
+
+typedef struct _RTL_BOOTSTRAP {
+    PINITIALIZE_RTL InitializeRtl;
+    PINITIALIZE_ALLOCATOR InitializeHeapAllocator;
+    PDESTROY_ALLOCATOR DestroyHeapAllocator;
+    PLOAD_SYMBOLS LoadSymbols;
+} RTL_BOOTSTRAP;
+typedef RTL_BOOTSTRAP *PRTL_BOOTSTRAP;
+
+FORCEINLINE
+BOOLEAN
+BootstrapRtl(
+    HMODULE *RtlModulePointer,
+    PRTL_BOOTSTRAP Bootstrap
+    )
+{
+    BOOL Success;
+    PROC Proc;
+    HMODULE Module;
+    ULONG NumberOfResolvedSymbols;
+    ULONG ExpectedNumberOfResolvedSymbols;
+    PLOAD_SYMBOLS LoadSymbols;
+
+    CONST PCSTR Names[] = {
+        "InitializeRtl",
+        "HeapAllocatorInitialize",
+        "HeapAllocatorDestroy",
+        "LoadSymbols",
+    };
+
+    ULONG BitmapBuffer[(ALIGN_UP(ARRAYSIZE(Names), sizeof(ULONG) << 3) >> 5)+1];
+    RTL_BITMAP FailedBitmap = { ARRAYSIZE(Names)+1, (PULONG)&BitmapBuffer };
+
+    ExpectedNumberOfResolvedSymbols = ARRAYSIZE(Names);
+
+    Module = LoadLibraryA("Rtl.dll");
+    if (!Module) {
+        return FALSE;
+    }
+
+    Proc = GetProcAddress(Module, "LoadSymbols");
+    if (!Proc) {
+        FreeLibrary(Module);
+        return FALSE;
+    }
+
+    LoadSymbols = (PLOAD_SYMBOLS)Proc;
+
+    Success = LoadSymbols(
+        Names,
+        ARRAYSIZE(Names),
+        (PULONG_PTR)Bootstrap,
+        sizeof(*Bootstrap) / sizeof(ULONG_PTR),
+        Module,
+        &FailedBitmap,
+        TRUE,
+        &NumberOfResolvedSymbols
+    );
+
+    if (!Success) {
+        FreeLibrary(Module);
+        return FALSE;
+    }
+
+    if (ExpectedNumberOfResolvedSymbols != NumberOfResolvedSymbols) {
+        FreeLibrary(Module);
+        return FALSE;
+    }
+
+    *RtlModulePointer = Module;
+
+    return TRUE;
+}
+
 
 #ifdef __cplusplus
 } // extern "C"
