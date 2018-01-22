@@ -190,10 +190,20 @@ InitializeWord(
         PBYTE Dest = (PBYTE)&Last;
         PBYTE Source = (PBYTE)&Doublewords[Length+1];
 
-        for (Index = 0; Index < TrailingBytes; Index++) {
-            *Dest++ = Source[Index];
-        }
+        //
+        // N.B. __movsb() needs to be used here in order to prevent the
+        //      the compiler from inserting a memcpy if a manual for loop
+        //      was done to copy the trailing bytes, e.g.:
+        //
+        //          for (Index = 0; Index < TrailingBytes; Index++) {
+        //              *Dest++ = Source[Index];
+        //          }
+        //
+        //      As we don't link with the CRT, no memcpy symbol will be
+        //      available and as such, this module won't compile.
+        //
 
+        __movsb(Dest, Source, TrailingBytes);
         StringHash = _mm_crc32_u32(StringHash, Last);
     }
 
