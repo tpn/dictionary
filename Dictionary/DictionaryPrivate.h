@@ -244,7 +244,7 @@ typedef WORD_TABLE *PWORD_TABLE;
 
 typedef struct _WORD_TABLE_ENTRY {
     WORD_ENTRY WordEntry;
-    PLENGTH_TABLE_ENTRY LengthEntry;
+    PLENGTH_TABLE_ENTRY LengthTableEntry;
     LIST_ENTRY LengthListEntry;
 } WORD_TABLE_ENTRY;
 typedef WORD_TABLE_ENTRY *PWORD_TABLE_ENTRY;

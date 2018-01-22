@@ -68,8 +68,11 @@ Return Value:
     PULONG BitmapHash;
     PULONG HistogramHash;
     BOOLEAN NewWordEntry;
+    BOOLEAN NewLengthEntry;
     BOOLEAN NewBitmapEntry;
     BOOLEAN NewHistogramEntry;
+    BOOLEAN IsNewCurrentLongestWord;
+    BOOLEAN IsNewLongestWordAllTime;
     PALLOCATOR Allocator;
     PALLOCATOR WordAllocator;
     PLONG_STRING String;
@@ -82,6 +85,8 @@ Return Value:
     CHARACTER_BITMAP Bitmap;
     CHARACTER_HISTOGRAM Histogram;
     PHISTOGRAM_TABLE HistogramTable;
+    PCLONG_STRING CurrentLongestWord;
+    PCLONG_STRING LongestWordAllTime;
     PTABLE_ENTRY_HEADER TableEntryHeader;
     PRTL_INITIALIZE_GENERIC_TABLE_AVL RtlInitializeGenericTableAvl;
     PRTL_INSERT_ELEMENT_GENERIC_TABLE_AVL RtlInsertElementGenericTableAvl;
@@ -178,10 +183,11 @@ Return Value:
 
     //
     // Copy the word's hash into the appropriate location within the word
-    // table entry's header.
+    // table entry's header.  Ditto for the word's length.
     //
 
     WordTableEntryHeader.Hash = String->Hash;
+    LengthTableEntryHeader.Length = String->Length;
 
     //
     // Initialize the dictionary context and register it with TLS.
@@ -361,6 +367,101 @@ Return Value:
         TableEntryHeader = TABLE_ENTRY_TO_HEADER(WordTableEntry);
         TableEntryHeader->Hash = WordEntry->String.Hash;
 
+        //
+        // As this is a new word, insert the length into the dictionary's
+        // length AVL table.
+        //
+
+        LengthTable = &Dictionary->LengthTable;
+
+        Entry = LengthTableEntry;
+        EntrySize = sizeof(*LengthTableEntry);
+        LengthTableEntry = RtlInsertElementGenericTableAvl(&LengthTable->Avl,
+                                                           Entry,
+                                                           EntrySize,
+                                                           &NewLengthEntry);
+
+        if (!LengthTableEntry) {
+            goto Error;
+        }
+
+        if (NewLengthEntry) {
+
+            //
+            // Initialize the length table entry's linked list head.
+            //
+
+            InitializeListHead(&LengthTableEntry->LengthListHead);
+
+            //
+            // Copy the word length back over to the length table entry header.
+            //
+
+            TableEntryHeader = TABLE_ENTRY_TO_HEADER(LengthTableEntry);
+            TableEntryHeader->Length = WordEntry->String.Length;
+
+            //
+            // Determine if this is the dictionary's current longest word.
+            //
+
+            CurrentLongestWord = Dictionary->Stats.CurrentLongestWord;
+
+            IsNewCurrentLongestWord = (
+                CurrentLongestWord == NULL ||
+                WordEntry->String.Length > CurrentLongestWord->Length
+            );
+
+            if (IsNewCurrentLongestWord) {
+
+                //
+                // Register as the new longest word.
+                //
+
+                Dictionary->Stats.CurrentLongestWord = &WordEntry->String;
+
+                //
+                // Determine if this is the longest word the dictionary has
+                // ever seen.
+                //
+
+                LongestWordAllTime = Dictionary->Stats.LongestWordAllTime;
+                IsNewLongestWordAllTime = (
+                    LongestWordAllTime == NULL ||
+                    WordEntry->String.Length > LongestWordAllTime->Length
+                );
+
+                if (IsNewLongestWordAllTime) {
+
+                    //
+                    // Register as the new longest word of all time.  We
+                    // point to ourselves here again just like we did for
+                    // the current longest word registration above.  There
+                    // is logic in the word removal routine that checks if
+                    // the word is the longest of all time and if so, makes a
+                    // new copy of it before removing the original.
+                    //
+
+                    Dictionary->Stats.LongestWordAllTime = &WordEntry->String;
+                }
+            }
+        }
+
+        //
+        // Append the word table entry to the length table entry's list head.
+        //
+
+        InsertTailList(&LengthTableEntry->LengthListHead,
+                       &WordTableEntry->LengthListEntry);
+
+        //
+        // Point the word entry back to this newly-registered length list entry.
+        // This is required for word removal, as we'll need to remove the entry
+        // from the list head, and potentially update the dictionary's longest
+        // entry book keeping.
+        //
+
+        WordTableEntry->LengthTableEntry = LengthTableEntry;
+
     } else {
 
         //
@@ -388,12 +489,6 @@ Return Value:
 
         WordStats->MaximumEntryCount = WordStats->EntryCount;
     }
-
-    //
-    // TODO: handle the length-tracking requirements.
-    //
-
-    LengthTable = &Dictionary->LengthTable;
 
     //
     // Update the caller's pointers.
