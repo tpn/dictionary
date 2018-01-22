@@ -24,7 +24,7 @@
     <ClInclude Include="../Dictionary/Dictionary.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dictionary\DictionaryPrivate.h">
+    <ClInclude Include="../Dictionary/DictionaryPrivate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,16 +35,13 @@
     <ClCompile Include="../Dictionary/Dictionary.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Dictionary\BitmapTable.c">
+    <ClCompile Include="../Dictionary/AddWord.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Dictionary\HistogramTable.c">
+    <ClCompile Include="../Dictionary/FindWord.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Dictionary\AddWord.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dictionary\FindWord.c">
+    <ClCompile Include="../Dictionary/Tables.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

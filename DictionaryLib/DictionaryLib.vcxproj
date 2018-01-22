@@ -66,9 +66,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
-    <Link>
-      <AdditionalDependencies>TracerHeapLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
     <ClCompile>
       <PreprocessorDefinitions>_DICTIONARY_INTERNAL_BUILD;_DICTIONARY_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -77,22 +74,16 @@
     <ClInclude Include="../Dictionary/stdafx.h" />
     <ClInclude Include="../Dictionary/targetver.h" />
     <ClInclude Include="../Dictionary/Dictionary.h" />
-    <ClInclude Include="..\Dictionary\DictionaryPrivate.h" />
+    <ClInclude Include="../Dictionary/DictionaryPrivate.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="../Dictionary/stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="../Dictionary/Dictionary.c" />
-    <ClCompile Include="..\Dictionary\AddWord.c" />
-    <ClCompile Include="..\Dictionary\BitmapTable.c" />
-    <ClCompile Include="..\Dictionary\FindWord.c" />
-    <ClCompile Include="..\Dictionary\HistogramTable.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TracerHeapLib\TracerHeapLib.vcxproj">
-      <Project>{7ACFFDFC-D904-4937-9814-910817191174}</Project>
-    </ProjectReference>
+    <ClCompile Include="../Dictionary/AddWord.c" />
+    <ClCompile Include="../Dictionary/FindWord.c" />
+    <ClCompile Include="../Dictionary/Tables.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

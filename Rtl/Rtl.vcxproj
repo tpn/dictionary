@@ -75,6 +75,8 @@
     <ClInclude Include="Cu.h" />
     <ClInclude Include="Cuda.h" />
     <ClInclude Include="DbghelpFunctionPointerTypedefs.h" />
+    <ClInclude Include="HeapAllocator.h" />
+    <ClInclude Include="HeapAllocatorPrivate.h" />
     <ClInclude Include="Injection.h" />
     <ClInclude Include="InjectionInline.h" />
     <ClInclude Include="Memory.h" />
@@ -97,6 +99,7 @@
       <PrecompiledHeader />
     </ClCompile>
     <ClCompile Include="File.c" />
+    <ClCompile Include="HeapAllocator.c" />
     <ClCompile Include="Loader.c" />
     <ClCompile Include="Privilege.c" />
     <ClCompile Include="Registry.c" />
