@@ -237,13 +237,53 @@ BOOLEAN
 typedef ADD_WORD *PADD_WORD;
 
 //
+// Helper functions.
+//
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI SET_MINIMUM_WORD_LENGTH)(
+    _Inout_ PDICTIONARY Dictionary,
+    _In_ ULONG MinimumWordLength
+    );
+typedef SET_MINIMUM_WORD_LENGTH *PSET_MINIMUM_WORD_LENGTH;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI SET_MAXIMUM_WORD_LENGTH)(
+    _Inout_ PDICTIONARY Dictionary,
+    _In_ ULONG MinimumWordLength
+    );
+typedef SET_MAXIMUM_WORD_LENGTH *PSET_MAXIMUM_WORD_LENGTH;
+
+//
 // Inline function for helping load the dictionary in a dynamic module context.
 //
 
 typedef struct _DICTIONARY_FUNCTIONS {
+
+    //
+    // Dictionary creation and destruction methods.
+    //
+
     PCREATE_DICTIONARY CreateDictionary;
     PDESTROY_DICTIONARY DestroyDictionary;
+
+    //
+    // Main API methods.
+    //
+
     PADD_WORD AddWord;
+
+    //
+    // Helpers.
+    //
+
+    PSET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
+    PSET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
+
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
 
@@ -264,6 +304,8 @@ LoadDictionaryModule(
         "CreateDictionary",
         "DestroyDictionary",
         "AddWord",
+        "SetMinimumWordLength",
+        "SetMaximumWordLength",
     };
 
     ULONG BitmapBuffer[(ALIGN_UP(ARRAYSIZE(Names), sizeof(ULONG) << 3) >> 5)+1];
@@ -313,10 +355,12 @@ LoadDictionaryModule(
 //
 
 DICTIONARY_API CREATE_DICTIONARY CreateDictionary;
-
 DICTIONARY_API DESTROY_DICTIONARY DestroyDictionary;
 
 DICTIONARY_API ADD_WORD AddWord;
+
+DICTIONARY_API SET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
+DICTIONARY_API SET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
 
 #ifdef __cplusplus
 } // extern "C"
