@@ -30,7 +30,7 @@ A dictionary component with anagram support.
    more I'll probably switch to unit tests via the TestDirectory
    component.
 
-   Hours: 7.38
+Hours: 7.38
 
 ## Day 2
 
@@ -54,7 +54,7 @@ A dictionary component with anagram support.
 
 8. Stub out the initial add word/find word etc functions ready for tomorrow.
 
-    Hours: 7.17 (3.07, 1.33, 2.77)
+Hours: 7.17 (3.07, 1.33, 2.77)
 
 ## Day 3
 
@@ -78,6 +78,38 @@ promoted to longest.
 The latter is a subtle detail I only caught today.  I'm implementing the
 functionality via (yet another) AVL table; one specifically for word lengths.
 
-    Hours: 11.08 (2.6, 3.27, 2.05, 3.17)
+Hours: 11.08 (2.6, 3.27, 2.05, 3.17)
+
+## Day 4
+
+Notable design decision change: decided to *not* store bitmaps or histograms in
+any of the AVL trees, simply relying on the 32-bit hashes we embed within the
+AVL table entry header nodes for determining equality.
+
+This saves about 128 bytes per unique bitmap and over 1024 bytes per unique
+histogram, which is substantial.
+
+Hash collisions will be possible, however, this will really only affect the
+anagram functionality, in that we'll need to traverse a given histogram table
+when we've been asked to find all anagrams for a given word.
+
+The histogram comparison routine [CompareHistogramsAlignedAvx2](https://github.com/tpn/dictionary/blob/v0.4/Dictionary/Histogram.c#L24)
+has been implemented using AVX2 intrinsics as the name would suggest, which
+will improve the performance of the histogram comparisons when identifying
+anagrams.  I anticipate re-creating the histogram for each string as part
+of the anagram logic -- so we're paying some CPU costs for sizable space
+savings.
+
+Word lookup should be fast in the case where the underlying string hashes differ.
+In the case where the string hashes are identical, another AVX2-optimized string
+comparison routine was written to improve the performance of this operation:
+[CompareWords](https://github.com/tpn/dictionary/blob/v0.4/Dictionary/Word.c#L231).
+
+This routine compares up to 32 bytes at a time using non-temporal streaming loads if
+possible.  It takes into account underlying string buffer alignment and
+potential issues when crossing page boundaries.
+
+The AddWord() routine is mostly finished and works, it just needs to have some
+logic added to it to deal with registering as the longest string if applicable.
 
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
