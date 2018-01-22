@@ -68,6 +68,8 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 MAKE_STRING(Below, "below");
 MAKE_STRING(Elbow, "elbow");
+MAKE_STRING(QuickFox, "The quick brown fox jumps over the lazy dog.");
+MAKE_STRING(LazyDog,  "The lazy dog jumps over the quick brown fox.");
 
 RTL GlobalRtl;
 ALLOCATOR GlobalAllocator;
