@@ -51,7 +51,7 @@ Arguments:
 
     EntryCountPointer - Supplies an address to a variable that receives the
         current entry count associated with the word at the time that it was
-        added to the directory.
+        added to the directory.  Set to zero on error.
 
 Return Value:
 
@@ -139,7 +139,7 @@ Return Value:
     ZeroStruct(HistogramTableEntryHeader);
 
     //
-    // Initialize aliases.
+    // Initialize aliases and various table entry pointers.
     //
 
     Rtl = Dictionary->Rtl;
@@ -147,10 +147,6 @@ Return Value:
     WordAllocator = Dictionary->WordAllocator;
     RtlInitializeGenericTableAvl = Rtl->RtlInitializeGenericTableAvl;
     RtlInsertElementGenericTableAvl = Rtl->RtlInsertElementGenericTableAvl;
-
-    //
-    // Initialize pointers.
-    //
 
     WordTableEntry = HEADER_TO_WORD_TABLE_ENTRY(&WordTableEntryHeader);
     LengthTableEntry = HEADER_TO_LENGTH_TABLE_ENTRY(&LengthTableEntryHeader);
