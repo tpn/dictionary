@@ -112,4 +112,6 @@ potential issues when crossing page boundaries.
 The AddWord() routine is mostly finished and works, it just needs to have some
 logic added to it to deal with registering as the longest string if applicable.
 
+Hours: 8.65 (3.03, 5.62)
+
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
