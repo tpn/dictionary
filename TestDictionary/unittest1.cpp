@@ -175,6 +175,120 @@ namespace TestDictionary
                              &EntryCount)
             );
 
+            Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordNullStringRejected)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsFalse(
+                Api->AddWord(Dictionary,
+                             (PCBYTE)"",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(WordEntry == NULL);
+            Assert::IsTrue(EntryCount == 0);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordRejectsShortWord)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(Api->SetMinimumWordLength(Dictionary, 2));
+
+            Assert::IsFalse(
+                Api->AddWord(Dictionary,
+                             (PCBYTE)"a",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(WordEntry == NULL);
+            Assert::IsTrue(EntryCount == 0);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordRejectsLongWord)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(Api->SetMaximumWordLength(Dictionary, 2));
+
+            Assert::IsFalse(
+                Api->AddWord(Dictionary,
+                             (PCBYTE)"abc",
+                             &WordEntry,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(WordEntry == NULL);
+            Assert::IsTrue(EntryCount == 0);
+
             Assert::IsTrue(
                 Api->DestroyDictionary(
                     &Dictionary,

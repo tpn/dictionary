@@ -327,4 +327,80 @@ End:
     return Success;
 }
 
+//
+// Helper functions for setting minimum and maximum length values.
+//
+
+_Use_decl_annotations_
+BOOLEAN
+SetMinimumWordLength(
+    PDICTIONARY Dictionary,
+    ULONG MinimumWordLength
+    )
+{
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Dictionary)) {
+        return FALSE;
+    }
+
+    if (!MinimumWordLength) {
+        return FALSE;
+    }
+
+    if (MinimumWordLength > Dictionary->MaximumWordLength) {
+        return FALSE;
+    }
+
+    if (MinimumWordLength > ABSOLUTE_MAXIMUM_WORD_LENGTH) {
+        return FALSE;
+    }
+
+    //
+    // Value has been validated; update the dictionary accordingly.
+    //
+
+    Dictionary->MinimumWordLength = MinimumWordLength;
+
+    return TRUE;
+}
+
+_Use_decl_annotations_
+BOOLEAN
+SetMaximumWordLength(
+    PDICTIONARY Dictionary,
+    ULONG MaximumWordLength
+    )
+{
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Dictionary)) {
+        return FALSE;
+    }
+
+    if (!MaximumWordLength) {
+        return FALSE;
+    }
+
+    if (MaximumWordLength < Dictionary->MinimumWordLength) {
+        return FALSE;
+    }
+
+    if (MaximumWordLength > ABSOLUTE_MAXIMUM_WORD_LENGTH) {
+        return FALSE;
+    }
+
+    //
+    // Value has been validated; update the dictionary accordingly.
+    //
+
+    Dictionary->MaximumWordLength = MaximumWordLength;
+
+    return TRUE;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
