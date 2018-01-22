@@ -25,6 +25,8 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #define MAKE_STRING(Name, Value)                                       \
     static const LONG_STRING Name = CONSTANT_LONG_STRING((PBYTE)Value)
 
+#define MAKE_BYTES(Value) ((PCBYTE)Value)
+
 #ifndef UNUSED_PARAMETER
 #define UNUSED_PARAMETER(Name) ((VOID)Name)
 #endif
@@ -212,6 +214,153 @@ namespace TestDictionary
                              &WordEntry,
                              &EntryCount)
             );
+
+            Assert::IsTrue(EntryCount == 2);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        //
+        // Verify trailing bytes after the NUL terminator are ignored.
+        //
+
+        TEST_METHOD(AddWordNullTerminatorVerification1)
+        {
+            BYTE Index;
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+            PCBYTE Strings[] = {
+                (PCBYTE)"a\0b",
+                (PCBYTE)"a\0bc",
+                (PCBYTE)"a\0bcd",
+                (PCBYTE)"a\0bcde",
+            };
+            PCBYTE String;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            for (Index = 0; Index < ARRAYSIZE(Strings); Index++) {
+                String = Strings[Index];
+
+                Assert::IsTrue(
+                    Api->AddWord(Dictionary,
+                                 String,
+                                 &WordEntry,
+                                 &EntryCount)
+                );
+
+                Assert::IsTrue(EntryCount == (LONGLONG)(Index+1));
+            }
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordNullTerminatorVerification2)
+        {
+            BYTE Index;
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+            PCBYTE Strings[] = {
+                (PCBYTE)"abcd\0e",
+                (PCBYTE)"abcd\0ef",
+                (PCBYTE)"abcd\0efg",
+                (PCBYTE)"abcd\0efgh",
+            };
+            PCBYTE String;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            for (Index = 0; Index < ARRAYSIZE(Strings); Index++) {
+                String = Strings[Index];
+
+                Assert::IsTrue(
+                    Api->AddWord(Dictionary,
+                                 String,
+                                 &WordEntry,
+                                 &EntryCount)
+                );
+
+                Assert::IsTrue(EntryCount == (LONGLONG)(Index+1));
+            }
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(AddWordNullTerminatorVerification3)
+        {
+            BYTE Index;
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            PCWORD_ENTRY WordEntry;
+            LONGLONG EntryCount;
+            PCBYTE Strings[] = {
+                (PCBYTE)"abcd1\0e",
+                (PCBYTE)"abcd1\0ef",
+                (PCBYTE)"abcd1\0efg",
+                (PCBYTE)"abcd1\0efgh",
+            };
+            PCBYTE String;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            for (Index = 0; Index < ARRAYSIZE(Strings); Index++) {
+                String = Strings[Index];
+
+                Assert::IsTrue(
+                    Api->AddWord(Dictionary,
+                                 String,
+                                 &WordEntry,
+                                 &EntryCount)
+                );
+
+                Assert::IsTrue(EntryCount == (LONGLONG)(Index+1));
+            }
 
             Assert::IsTrue(
                 Api->DestroyDictionary(

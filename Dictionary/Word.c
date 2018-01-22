@@ -34,14 +34,16 @@ InitializeWord(
 {
     BYTE Byte;
     BYTE TrailingBytes;
+    HASH Hash;
     ULONG Index;
     ULONG Length;
     ULONG BitmapHash;
     ULONG StringHash;
     ULONG HistogramHash;
+    ULONG NumberOfDoubleWords;
     PLONG Bits;
     PULONG Counts;
-    PULONG Doublewords;
+    PULONG DoubleWords;
 
     //
     // Verify arguments.
@@ -145,10 +147,9 @@ InitializeWord(
 
     BitmapHash = Length;
     for (Index = 0; Index < ARRAYSIZE(Bitmap->Bits); Index++) {
-        ULONG Bits = Bitmap->Bits[Index];
-        if (Bits) {
-            BitmapHash = _mm_crc32_u32(BitmapHash, Bits);
-        }
+        Hash.Index = Index;
+        Hash.Value = Bitmap->Bits[Index];
+        BitmapHash = _mm_crc32_u32(BitmapHash, Hash.AsULong);
     }
 
     //
@@ -160,35 +161,36 @@ InitializeWord(
 
     HistogramHash = Length;
     for (Index = 0; Index < NUMBER_OF_CHARACTER_BITS; Index++) {
-        ULONG Count = Counts[Index];
-        if (Count) {
-            HistogramHash = _mm_crc32_u32(HistogramHash, Count);
-        }
+        Hash.Index = Index;
+        Hash.Value = Counts[Index];
+        HistogramHash = _mm_crc32_u32(HistogramHash, Hash.AsULong);
     }
 
     //
     // Calculate the string hash.
     //
 
-    StringHash = 0;
-    Doublewords = (PULONG)Bytes;
-    for (Index = 0; Index < Length; Index += 4) {
-        ULONG Doubleword = Doublewords[Index+0];
-        StringHash = _mm_crc32_u32(StringHash, Doublewords[Index+0]);
-        StringHash = _mm_crc32_u32(StringHash, Doublewords[Index+1]);
-        StringHash = _mm_crc32_u32(StringHash, Doublewords[Index+2]);
-        StringHash = _mm_crc32_u32(StringHash, Doublewords[Index+3]);
+    StringHash = Length;
+    DoubleWords = (PULONG)Bytes;
+    TrailingBytes = Length % 4;
+    NumberOfDoubleWords = Length >> 2;
+
+    if (NumberOfDoubleWords) {
+
+        //
+        // There's at least 4 bytes of data.
+        //
+
+        for (Index = 0; Index < NumberOfDoubleWords; Index++) {
+            StringHash = _mm_crc32_u32(StringHash, DoubleWords[Index]);
+        }
     }
 
-    //
-    // Factor in trailing bytes.
-    //
-
-    TrailingBytes = Length % 4;
     if (TrailingBytes) {
+
         ULONG Last = 0;
         PBYTE Dest = (PBYTE)&Last;
-        PBYTE Source = (PBYTE)&Doublewords[Length+1];
+        PBYTE Source = (PBYTE)&DoubleWords[NumberOfDoubleWords];
 
         //
         // N.B. __movsb() needs to be used here in order to prevent the
@@ -206,12 +208,6 @@ InitializeWord(
         __movsb(Dest, Source, TrailingBytes);
         StringHash = _mm_crc32_u32(StringHash, Last);
     }
-
-    //
-    // Add in the string's length to the hash.
-    //
-
-    StringHash = _mm_crc32_u32(StringHash, Length);
 
     //
     // Wire up the string details.
