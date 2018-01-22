@@ -32,9 +32,26 @@ Routine Description:
     entry count at the time it was added (i.e. if this is 1, indicates it was
     the first entry added to the table).
 
+    N.B. The word may also be registered as the current and all-time longest
+         word associated with the dictionary.
+
 Arguments:
 
-    TBD.
+    Dictionary - Supplies a pointer to a DICTIONARY structure to which the
+        word is to be added.
+
+    Word - Supplies a NULL-terminated array of bytes to add to the dictionary.
+        The length of the array must be between the minimum and maximum lengths
+        configured for the dictionary, otherwise the word will be rejected and
+        this routine will return FALSE.
+
+    WordEntryPointer - Supplies an address to a variable that receives the
+        address of the WORD_ENTRY structure representing the word added if
+        no error occurred.  Will be set to NULL on error.
+
+    EntryCountPointer - Supplies an address to a variable that receives the
+        current entry count associated with the word at the time that it was
+        added to the directory.
 
 Return Value:
 
@@ -54,26 +71,30 @@ Return Value:
     BOOLEAN NewBitmapEntry;
     BOOLEAN NewHistogramEntry;
     PALLOCATOR Allocator;
+    PALLOCATOR WordAllocator;
     PLONG_STRING String;
     PWORD_TABLE WordTable;
     PWORD_ENTRY WordEntry;
     PWORD_STATS WordStats;
     PLENGTH_TABLE LengthTable;
     PBITMAP_TABLE BitmapTable;
-    PHISTOGRAM_TABLE HistogramTable;
     DICTIONARY_CONTEXT Context;
-    PCHARACTER_BITMAP Bitmap;
-    PCHARACTER_HISTOGRAM Histogram;
+    CHARACTER_BITMAP Bitmap;
+    CHARACTER_HISTOGRAM Histogram;
+    PHISTOGRAM_TABLE HistogramTable;
+    PTABLE_ENTRY_HEADER TableEntryHeader;
     PRTL_INITIALIZE_GENERIC_TABLE_AVL RtlInitializeGenericTableAvl;
     PRTL_INSERT_ELEMENT_GENERIC_TABLE_AVL RtlInsertElementGenericTableAvl;
 
     PWORD_TABLE_ENTRY WordTableEntry;
+    PLENGTH_TABLE_ENTRY LengthTableEntry;
     PBITMAP_TABLE_ENTRY BitmapTableEntry;
     PHISTOGRAM_TABLE_ENTRY HistogramTableEntry;
 
-    WORD_TABLE_ENTRY_FULL WordTableEntryFull;
-    BITMAP_TABLE_ENTRY_FULL BitmapTableEntryFull;
-    HISTOGRAM_TABLE_ENTRY_FULL HistogramTableEntryFull;
+    TABLE_ENTRY_HEADER WordTableEntryHeader;
+    TABLE_ENTRY_HEADER LengthTableEntryHeader;
+    TABLE_ENTRY_HEADER BitmapTableEntryHeader;
+    TABLE_ENTRY_HEADER HistogramTableEntryHeader;
 
     //
     // Validate arguments.
@@ -107,9 +128,10 @@ Return Value:
     //
 
     ZeroStruct(Context);
-    ZeroStruct(WordTableEntryFull);
-    ZeroStruct(BitmapTableEntryFull);
-    ZeroStruct(HistogramTableEntryFull);
+    ZeroStruct(WordTableEntryHeader);
+    ZeroStruct(LengthTableEntryHeader);
+    ZeroStruct(BitmapTableEntryHeader);
+    ZeroStruct(HistogramTableEntryHeader);
 
     //
     // Initialize aliases.
@@ -117,6 +139,7 @@ Return Value:
 
     Rtl = Dictionary->Rtl;
     Allocator = Dictionary->Allocator;
+    WordAllocator = Dictionary->WordAllocator;
     RtlInitializeGenericTableAvl = Rtl->RtlInitializeGenericTableAvl;
     RtlInsertElementGenericTableAvl = Rtl->RtlInsertElementGenericTableAvl;
 
@@ -124,11 +147,15 @@ Return Value:
     // Initialize pointers.
     //
 
-    String = &WordTableEntryFull.Entry.WordEntry.String;
-    Bitmap = &BitmapTableEntryFull.Entry.Bitmap;
-    Histogram = &HistogramTableEntryFull.Entry.Histogram;
-    BitmapHash = &BitmapTableEntryFull.Hash;
-    HistogramHash = &HistogramTableEntryFull.Hash;
+    WordTableEntry = HEADER_TO_WORD_TABLE_ENTRY(&WordTableEntryHeader);
+    LengthTableEntry = HEADER_TO_LENGTH_TABLE_ENTRY(&LengthTableEntryHeader);
+    BitmapTableEntry = HEADER_TO_BITMAP_TABLE_ENTRY(&BitmapTableEntryHeader);
+    HistogramTableEntry =
+        HEADER_TO_HISTOGRAM_TABLE_ENTRY(&HistogramTableEntryHeader);
+
+    String = &WordTableEntry->WordEntry.String;
+    BitmapHash = &BitmapTableEntryHeader.Hash;
+    HistogramHash = &HistogramTableEntryHeader.Hash;
 
     //
     // Initialize the word.  This will verify the length of the incoming string
@@ -140,14 +167,21 @@ Return Value:
                              Dictionary->MinimumWordLength,
                              Dictionary->MaximumWordLength,
                              String,
-                             Bitmap,
-                             Histogram,
+                             &Bitmap,
+                             &Histogram,
                              BitmapHash,
                              HistogramHash);
 
     if (!Success) {
         return FALSE;
     }
+
+    //
+    // Copy the word's hash into the appropriate location within the word
+    // table entry's header.
+    //
+
+    WordTableEntryHeader.Hash = String->Hash;
 
     //
     // Initialize the dictionary context and register it with TLS.
@@ -168,7 +202,7 @@ Return Value:
     // AVL table.
     //
 
-    Entry = &BitmapTableEntryFull.Entry;
+    Entry = BitmapTableEntry;
     EntrySize = sizeof(*BitmapTableEntry);
     BitmapTable = &Dictionary->BitmapTable;
 
@@ -200,6 +234,14 @@ Return Value:
                                      HistogramTableAllocateRoutine,
                                      HistogramTableFreeRoutine,
                                      Dictionary);
+
+        //
+        // Copy the hash back over, it won't be done automatically for us as
+        // we're embedding it within the RTL_BALANCED_LINKS structure.
+        //
+
+        TableEntryHeader = TABLE_ENTRY_TO_HEADER(BitmapTableEntry);
+        TableEntryHeader->Hash = *BitmapHash;
     }
 
     //
@@ -207,7 +249,7 @@ Return Value:
     // histogram table.
     //
 
-    Entry = &HistogramTableEntryFull.Entry;
+    Entry = HistogramTableEntry;
     EntrySize = sizeof(*HistogramTableEntry);
     HistogramTableEntry = RtlInsertElementGenericTableAvl(&HistogramTable->Avl,
                                                           Entry,
@@ -249,10 +291,11 @@ Return Value:
                                      Dictionary);
 
         //
-        // Initialize the histogram table's anagram list head.
+        // Copy the hash back over.
         //
 
-        InitializeListHead(&HistogramTableEntry->AnagramListHead);
+        TableEntryHeader = TABLE_ENTRY_TO_HEADER(HistogramTableEntry);
+        TableEntryHeader->Hash = *HistogramHash;
     }
 
     //
@@ -260,7 +303,13 @@ Return Value:
     // word table.
     //
 
-    Entry = &WordTableEntryFull.Entry;
+    Context.String = String;
+    Context.WordTable = WordTable;
+    Context.WordEntry = &WordTableEntry->WordEntry;
+    Context.WordTableEntry = WordTableEntry;
+    Context.TableEntryHeader = &WordTableEntryHeader;
+
+    Entry = WordTableEntry;
     EntrySize = sizeof(*WordTableEntry);
     WordTableEntry = RtlInsertElementGenericTableAvl(&WordTable->Avl,
                                                      Entry,
@@ -282,14 +331,6 @@ Return Value:
     if (NewWordEntry) {
 
         //
-        // This is the first time we've seen this word.  Link it to the
-        // histogram table's anagram list head.
-        //
-
-        InsertTailList(&HistogramTableEntry->AnagramListHead,
-                       &WordEntry->AnagramListEntry);
-
-        //
         // Allocate new space for the underlying string buffer and then copy
         // the input string over such that we're not reliant on the memory
         // provided by the caller.  We add 1 to the length to account for the
@@ -298,7 +339,7 @@ Return Value:
 
         Length = WordEntry->String.Length;
 
-        Buffer = (PBYTE)Allocator->Malloc(Allocator, Length + 1);
+        Buffer = (PBYTE)WordAllocator->Malloc(Allocator, Length + 1);
 
         if (!Buffer) {
             goto Error;
@@ -312,6 +353,13 @@ Return Value:
         CopyMemory(Buffer, WordEntry->String.Buffer, Length);
         Buffer[Length] = '\0';
         WordEntry->String.Buffer = Buffer;
+
+        //
+        // Copy the hash back over.
+        //
+
+        TableEntryHeader = TABLE_ENTRY_TO_HEADER(WordTableEntry);
+        TableEntryHeader->Hash = WordEntry->String.Hash;
 
     } else {
 

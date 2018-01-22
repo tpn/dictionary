@@ -51,24 +51,120 @@ typedef SRWLOCK DICTIONARY_LOCK;
 #define ReleaseDictionaryLockExclusive ReleaseSRWLockExclusive
 
 //
+// Define a generic table entry structure.  This mimics the layout of the table
+// entry header (essentially, a RTL_BALANCED_LINKS structure) used by the AVL
+// table routines.
+//
+
+typedef struct _TABLE_ENTRY_HEADER {
+
+    union {
+
+        //
+        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
+        // of the structure normally used for padding for our own purposes.
+        //
+
+        struct {
+
+            struct _RTL_BALANCED_LINKS *Parent;
+            struct _RTL_BALANCED_LINKS *LeftChild;
+            struct _RTL_BALANCED_LINKS *RightChild;
+            CHAR Balance;
+            UCHAR Reserved[3];
+
+            //
+            // For bitmaps, histograms and word table entries, we stash the
+            // 32-bit CRC32 of the data in the following field.  For length
+            // entries, the length is stored.
+            //
+
+            union {
+                ULONG Hash;
+                ULONG Value;
+                ULONG Length;
+            };
+        };
+
+        RTL_BALANCED_LINKS BalancedLinks;
+
+        //
+        // Include RTL_SPLAY_LINKS which has the same pointer layout as the
+        // start of RTL_BALANCED_LINKS, which allows us to use the predecessor
+        // and successor Rtl functions.
+        //
+
+        RTL_SPLAY_LINKS SplayLinks;
+    };
+
+    //
+    // The AVL routines will position our node-specific data at the offset
+    // represented by this next field.  UserData essentially represents the
+    // first 8 bytes of our custom table entry node data.  It is cast directly
+    // to the various table entry subtypes (for bitmaps, histograms etc).
+    //
+
+    ULONGLONG UserData;
+
+} TABLE_ENTRY_HEADER;
+typedef TABLE_ENTRY_HEADER *PTABLE_ENTRY_HEADER;
+
+//
+// Provide convenience macros for casting back and forth between table entry
+// headers and the underlying entries.  Particularly useful in the AVL table
+// comparison routine callbacks where we'll typically want to access the hash
+// values embedded in the header.
+//
+
+#define TABLE_ENTRY_TO_HEADER(Entry)                             \
+    ((PTABLE_ENTRY_HEADER)(                                      \
+        RtlOffsetToPointer(                                      \
+            Entry,                                               \
+            -((SHORT)FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData)) \
+        )                                                        \
+    ))
+
+#define HEADER_TO_TABLE_ENTRY(Header, Type)            \
+    ((Type)(                                           \
+        RtlOffsetToPointer(                            \
+            Header,                                    \
+            FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData) \
+        )                                              \
+    ))
+
+#define HEADER_TO_WORD_TABLE_ENTRY(Header) \
+    HEADER_TO_TABLE_ENTRY(Header, PWORD_TABLE_ENTRY)
+
+#define HEADER_TO_LENGTH_TABLE_ENTRY(Header) \
+    HEADER_TO_TABLE_ENTRY(Header, PLENGTH_TABLE_ENTRY)
+
+#define HEADER_TO_BITMAP_TABLE_ENTRY(Header) \
+    HEADER_TO_TABLE_ENTRY(Header, PBITMAP_TABLE_ENTRY)
+
+#define HEADER_TO_HISTOGRAM_TABLE_ENTRY(Header) \
+    HEADER_TO_TABLE_ENTRY(Header, PHISTOGRAM_TABLE_ENTRY)
+
+//
 // Define character bitmap and histogram structures and supporting function
 // typedefs.
 //
 
 #define NUMBER_OF_CHARACTER_BITS 256
-#define NUMBER_OF_CHARACTER_BITS_IN_BYTES (256 / 8)
-#define NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS (256 / (4 << 3))
-#define NUMBER_OF_CHARACTER_BITS_IN_QUADWORDS (256 / (8 << 3))
+#define NUMBER_OF_CHARACTER_BITS_IN_BYTES (256 / 8)                 // 32
+#define NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS (256 / (4 << 3))    // 8
+#define NUMBER_OF_CHARACTER_BITS_IN_QUADWORDS (256 / (8 << 3))      // 4
 
 typedef union DECLSPEC_ALIGN(32) _CHARACTER_BITMAP {
      YMMWORD Ymm;
+     XMMWORD Xmm[2];
      LONG Bits[NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS];
 } CHARACTER_BITMAP;
 typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
 typedef const CHARACTER_BITMAP *PCCHARACTER_BITMAP;
 
-typedef struct DECLSPEC_ALIGN(256) _CHARACTER_HISTOGRAM {
+typedef union DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM {
     YMMWORD Ymm[32];
+    XMMWORD Xmm[64];
     ULONG Counts[NUMBER_OF_CHARACTER_BITS];
 } CHARACTER_HISTOGRAM;
 typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
@@ -88,7 +184,16 @@ BOOLEAN
     _Out_ PULONG HistogramHashPointer
     );
 typedef INITIALIZE_WORD *PINITIALIZE_WORD;
-extern INITIALIZE_WORD InitializeWord;
+INITIALIZE_WORD InitializeWord;
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI COMPARE_WORDS)(
+    _In_ _Const_ PCLONG_STRING LeftString,
+    _In_ _Const_ PCLONG_STRING RightString
+    );
+typedef COMPARE_WORDS *PCOMPARE_WORDS;
+COMPARE_WORDS CompareWords;
 
 typedef
 RTL_GENERIC_COMPARE_RESULTS
@@ -98,6 +203,8 @@ RTL_GENERIC_COMPARE_RESULTS
     );
 typedef COMPARE_CHARACTER_HISTOGRAMS *PCOMPARE_CHARACTER_HISTOGRAMS;
 
+COMPARE_CHARACTER_HISTOGRAMS CompareHistogramsAlignedAvx2;
+
 typedef
 RTL_GENERIC_COMPARE_RESULTS
 (NTAPI CONFIRM_GENERIC_EQUAL)(
@@ -105,6 +212,23 @@ RTL_GENERIC_COMPARE_RESULTS
     PVOID FirstStruct,
     PVOID SecondStruct
     );
+
+//
+// Define the length table.  We need to track word lengths in an ordered data
+// structure in order to satisfy the constraint that if the current longest
+// word is removed from the dictionary, the next longest word should be then
+// promoted to the longest.
+//
+
+typedef struct _LENGTH_TABLE {
+    RTL_AVL_TABLE Avl;
+} LENGTH_TABLE;
+typedef LENGTH_TABLE *PLENGTH_TABLE;
+
+typedef struct _LENGTH_TABLE_ENTRY {
+    LIST_ENTRY LengthListHead;
+} LENGTH_TABLE_ENTRY;
+typedef LENGTH_TABLE_ENTRY *PLENGTH_TABLE_ENTRY;
 
 
 //
@@ -115,165 +239,45 @@ RTL_GENERIC_COMPARE_RESULTS
 
 typedef struct _WORD_TABLE {
     RTL_AVL_TABLE Avl;
-    LIST_ENTRY AnagramListHead;
 } WORD_TABLE;
 typedef WORD_TABLE *PWORD_TABLE;
 
 typedef struct _WORD_TABLE_ENTRY {
-    struct _LENGTH_TABLE_ENTRY *LengthEntry;
     WORD_ENTRY WordEntry;
+    PLENGTH_TABLE_ENTRY LengthEntry;
+    LIST_ENTRY LengthListEntry;
 } WORD_TABLE_ENTRY;
 typedef WORD_TABLE_ENTRY *PWORD_TABLE_ENTRY;
 
-typedef struct _WORD_TABLE_ENTRY_FULL {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our hash.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
-
-            //
-            // Stash the hash of the word here. for the bitmap here.
-            //
-
-            ULONG Hash;
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-    };
-
-    WORD_TABLE_ENTRY Entry;
-    struct _LENGTH_TABLE_ENTRY *LengthEntry;
-
-} WORD_TABLE_ENTRY_FULL;
-typedef WORD_TABLE_ENTRY_FULL *PWORD_TABLE_ENTRY_FULL;
-
-//
-// Define the length table.
-//
-
-typedef struct _LENGTH_TABLE {
-    RTL_AVL_TABLE Avl;
-} LENGTH_TABLE;
-typedef LENGTH_TABLE *PLENGTH_TABLE;
-
-typedef struct _LENGTH_TABLE_ENTRY {
-    LIST_ENTRY LengthListEntry;
-    PWORD_ENTRY WordEntry;
-} LENGTH_TABLE_ENTRY;
-typedef LENGTH_TABLE_ENTRY *PLENGTH_TABLE_ENTRY;
-
-typedef struct _LENGTH_TABLE_ENTRY_FULL {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our hash.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
-
-            //
-            // Stash the word length here.
-            //
-
-            ULONG Length;
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-    };
-
-    LENGTH_TABLE_ENTRY Entry;
-
-} LENGTH_TABLE_ENTRY_FULL;
-typedef LENGTH_TABLE_ENTRY_FULL *PLENGTH_TABLE_ENTRY_FULL;
-
-
 //
 // Define the histogram table.  This is the second tier of the dictionary's
-// data structure hierarchy.  Each entry is uniquely-keyed by a character
-// histogram for a given set of word entries.  (The histogram is essentially
-// an array of 256 ULONGs; each element in the array reflects the character
-// value at that offset, e.g. the letter 'f' would be at offset 102, and the
-// underlying ULONG would represent a count of how many times 'f' appears in
-// the given word.)
+// data structure hierarchy.  Each entry is keyed by the 32-bit hash of the
+// underlying histogram.  Thus, there could be collisions where the same hash
+// value points to more than one histogram.  This is acceptable; when a word
+// is queried for anagrams, we can verify histograms at that stage and omit
+// words that don't match.  This trades extra CPU cost for space savings; the
+// CHARACTER_HISTOGRAM structure is essentially an array of 256 ULONGs with a
+// 32-byte alignment requirement.  Persisting this information for each entry
+// would require an additional 1056 bytes.
 //
-// This allows us to link anagrams together relatively efficiently as new words
-// are added to the table.
-//
-
 
 typedef struct _HISTOGRAM_TABLE {
     RTL_AVL_TABLE Avl;
 } HISTOGRAM_TABLE;
 typedef HISTOGRAM_TABLE *PHISTOGRAM_TABLE;
 
+//
+// Each histogram table entry embeds another AVL table of word entries.
+//
+
 typedef struct _HISTOGRAM_TABLE_ENTRY {
-    CHARACTER_HISTOGRAM Histogram;
     WORD_TABLE WordTable;
-    LIST_ENTRY AnagramListHead;
 } HISTOGRAM_TABLE_ENTRY;
 typedef HISTOGRAM_TABLE_ENTRY *PHISTOGRAM_TABLE_ENTRY;
 
-typedef struct _HISTOGRAM_TABLE_ENTRY_FULL {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our hash.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
-
-            //
-            // Stash the hash for the histogram here.
-            //
-
-            ULONG Hash;
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-    };
-
-    //
-    // Overlap the RTL table entry header 'UserData' field with our table
-    // entry field.
-    //
-
-    union {
-        ULONGLONG UserData;
-        HISTOGRAM_TABLE_ENTRY Entry;
-    };
-
-} HISTOGRAM_TABLE_ENTRY_FULL;
-typedef HISTOGRAM_TABLE_ENTRY_FULL *PHISTOGRAM_TABLE_ENTRY_FULL;
-
 //
-// Define the bitmap table.
+// Define the bitmap table.  Each bitmap table entry embeds another AVL table
+// of histogram entries.
 //
 
 typedef struct _BITMAP_TABLE {
@@ -282,88 +286,9 @@ typedef struct _BITMAP_TABLE {
 typedef BITMAP_TABLE *PBITMAP_TABLE;
 
 typedef struct _BITMAP_TABLE_ENTRY {
-    CHARACTER_BITMAP Bitmap;
     HISTOGRAM_TABLE HistogramTable;
 } BITMAP_TABLE_ENTRY;
 typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
-
-typedef struct _BITMAP_TABLE_ENTRY_FULL {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our hash.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
-
-            //
-            // Stash the hash for the bitmap here.
-            //
-
-            ULONG Hash;
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-    };
-
-    BITMAP_TABLE_ENTRY Entry;
-
-} BITMAP_TABLE_ENTRY_FULL;
-typedef BITMAP_TABLE_ENTRY_FULL *PBITMAP_TABLE_ENTRY_FULL;
-
-//
-// Define a generic table entry structure.
-//
-
-typedef struct _TABLE_ENTRY_FULL {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our hash.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
-
-            //
-            // Stash the hash of the word here. for the bitmap here.
-            //
-
-            union {
-                ULONG Hash;
-                ULONG Value;
-                ULONG Length;
-            };
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-    };
-
-    union {
-        WORD_TABLE_ENTRY WordTableEntry;
-        LENGTH_TABLE_ENTRY LengthTableEntry;
-        BITMAP_TABLE_ENTRY BitmapTableEntry;
-        HISTOGRAM_TABLE_ENTRY HistogramTableEntry;
-    };
-
-} TABLE_ENTRY_FULL;
-typedef TABLE_ENTRY_FULL *PTABLE_ENTRY_FULL;
-
 
 //
 // Define the main DICTIONARY structure and supporting flags.
@@ -434,6 +359,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _DICTIONARY {
     PALLOCATOR HistogramTableAllocator;
     PALLOCATOR WordTableAllocator;
     PALLOCATOR LengthTableAllocator;
+
+    //
+    // Pointer to word allocator (used for word copy operations).
+    //
+
+    PALLOCATOR WordAllocator;
 
     //
     // Capture current longest and all-time longest word entries via the stats
@@ -518,10 +449,15 @@ AVL_TABLE_FREE_ROUTINE LengthTableFreeRoutine;
 
 typedef struct _DICTIONARY_CONTEXT {
     PDICTIONARY Dictionary;
-    PBITMAP_TABLE_ENTRY BitmapTableEntry;
-    PHISTOGRAM_TABLE HistogramTable;
-    PHISTOGRAM_TABLE_ENTRY HistogramTableEntry;
+    PVOID TableEntry;
+    PTABLE_ENTRY_HEADER TableEntryHeader;
+    PWORD_TABLE WordTable;
     PWORD_ENTRY WordEntry;
+    PCLONG_STRING String;
+    PWORD_TABLE_ENTRY WordTableEntry;
+    PHISTOGRAM_TABLE HistogramTable;
+    PBITMAP_TABLE_ENTRY BitmapTableEntry;
+    PHISTOGRAM_TABLE_ENTRY HistogramTableEntry;
 } DICTIONARY_CONTEXT;
 typedef DICTIONARY_CONTEXT *PDICTIONARY_CONTEXT;
 

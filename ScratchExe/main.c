@@ -13,7 +13,6 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include "../Dictionary/Dictionary.h"
 
 RTL GlobalRtl;
 ALLOCATOR GlobalAllocator;
@@ -61,6 +60,43 @@ Scratch2(
         __debugbreak();
     }
 
+    Success = Api->AddWord(Dictionary,
+                           "elbow",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->AddWord(Dictionary,
+                           "elbow",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->AddWord(Dictionary,
+                           "below",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+    Success = Api->AddWord(Dictionary,
+                           "below",
+                           &WordEntry,
+                           &EntryCount);
+
+    if (!Success) {
+        __debugbreak();
+    }
+
+
     Success = Api->DestroyDictionary(&Dictionary, &IsProcessTerminating);
 
     if (!Success) {
@@ -77,21 +113,21 @@ mainCRTStartup()
 {
     LONG ExitCode = 0;
     LONG SizeOfRtl = sizeof(GlobalRtl);
-    HMODULE RtlModule = LoadLibraryA("Rtl.dll");
-    PROC Proc = GetProcAddress(RtlModule, "InitializeRtl");
-    PINITIALIZE_RTL InitializeRtl = (PINITIALIZE_RTL)Proc;
+    HMODULE RtlModule;
+    RTL_BOOTSTRAP Bootstrap;
 
-    //
-    // Initialization glue for our allocator, config, rtl and dictionary.
-    //
+    if (!BootstrapRtl(&RtlModule, &Bootstrap)) {
+        ExitCode = 1;
+        goto Error;
+    }
 
-    if (!DefaultHeapInitializeAllocator(&GlobalAllocator)) {
+    if (!Bootstrap.InitializeHeapAllocator(&GlobalAllocator)) {
         ExitCode = 1;
         goto Error;
     }
 
     CHECKED_MSG(
-        InitializeRtl(&GlobalRtl, &SizeOfRtl),
+        Bootstrap.InitializeRtl(&GlobalRtl, &SizeOfRtl),
         "InitializeRtl()"
     );
 

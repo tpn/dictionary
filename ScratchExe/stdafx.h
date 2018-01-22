@@ -19,8 +19,6 @@ Abstract:
 #include <Windows.h>
 #include "../Rtl/Rtl.h"
 #include "../Rtl/__C_specific_handler.h"
-#include "../TraceStore/TraceStore.h"
-#include "../TracerHeap/TracerHeap.h"
-#include "../TracerConfig/TracerConfig.h"
+#include "../Dictionary/Dictionary.h"
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

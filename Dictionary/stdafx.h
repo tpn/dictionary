@@ -32,8 +32,6 @@ Abstract:
 #include "../Rtl/Rtl.h"
 #include "../Rtl/__C_specific_handler.h"
 #include "../Rtl/atexit.h"
-#include "../TracerConfig/TracerConfig.h"
-#include "../TracerHeap/TracerHeap.h"
 #include "Dictionary.h"
 
 #ifdef _DICTIONARY_INTERNAL_BUILD
