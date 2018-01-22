@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    FindWord.c
+    RemoveWord.c
 
 Abstract:
 
-    This module implements the find word functionality for the dictionary
+    This module implements the word removal functionality for the dictionary
     component.
 
 --*/
@@ -17,10 +17,10 @@ Abstract:
 
 _Use_decl_annotations_
 BOOLEAN
-FindWord(
+RemoveWord(
     PDICTIONARY Dictionary,
     PCBYTE Word,
-    PCWORD_ENTRY *WordEntryPointer
+    LONGLONG *EntryCountPointer
     )
 /*++
 
@@ -52,7 +52,7 @@ Return Value:
         return FALSE;
     }
 
-    if (!ARGUMENT_PRESENT(WordEntryPointer)) {
+    if (!ARGUMENT_PRESENT(EntryCountPointer)) {
         return FALSE;
     }
 

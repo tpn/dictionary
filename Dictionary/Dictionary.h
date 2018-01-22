@@ -236,9 +236,47 @@ BOOLEAN
     );
 typedef ADD_WORD *PADD_WORD;
 
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI FIND_WORD)(
+    _Inout_ PDICTIONARY Dictionary,
+    _In_z_ PCBYTE Word,
+    _Outptr_result_nullonfailure_ PCWORD_ENTRY *WordEntryPointer
+    );
+typedef FIND_WORD *PFIND_WORD;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI REMOVE_WORD)(
+    _Inout_ PDICTIONARY Dictionary,
+    _In_z_ PCBYTE Word,
+    _Outptr_ LONGLONG *EntryCountPointer
+    );
+typedef REMOVE_WORD *PREMOVE_WORD;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI GET_DICTIONARY_STATS)(
+    _In_ PDICTIONARY Dictionary,
+    _In_ PALLOCATOR Allocator,
+    _Outptr_result_nullonfailure_ PDICTIONARY_STATS *DictionaryStatsPointer
+    );
+typedef GET_DICTIONARY_STATS *PGET_DICTIONARY_STATS;
+
 //
-// Helper functions.
+// Helper functions (useful for unit tests).
 //
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI COMPARE_WORDS)(
+    _In_ _Const_ PCLONG_STRING LeftString,
+    _In_ _Const_ PCLONG_STRING RightString
+    );
+typedef COMPARE_WORDS *PCOMPARE_WORDS;
 
 typedef
 _Success_(return != 0)
@@ -276,10 +314,15 @@ typedef struct _DICTIONARY_FUNCTIONS {
     //
 
     PADD_WORD AddWord;
+    PFIND_WORD FindWord;
+    PREMOVE_WORD RemoveWord;
+    PGET_DICTIONARY_STATS GetDictionaryStats;
 
     //
     // Helpers.
     //
+
+    PCOMPARE_WORDS CompareWords;
 
     PSET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
     PSET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
@@ -303,7 +346,13 @@ LoadDictionaryModule(
     CONST PCSTR Names[] = {
         "CreateDictionary",
         "DestroyDictionary",
+
         "AddWord",
+        "FindWord",
+        "RemoveWord",
+        "GetDictionaryStats",
+
+        "CompareWords",
         "SetMinimumWordLength",
         "SetMaximumWordLength",
     };
@@ -358,7 +407,11 @@ DICTIONARY_API CREATE_DICTIONARY CreateDictionary;
 DICTIONARY_API DESTROY_DICTIONARY DestroyDictionary;
 
 DICTIONARY_API ADD_WORD AddWord;
+DICTIONARY_API FIND_WORD FindWord;
+DICTIONARY_API REMOVE_WORD RemoveWord;
+DICTIONARY_API GET_DICTIONARY_STATS GetDictionaryStats;
 
+DICTIONARY_API COMPARE_WORDS CompareWords;
 DICTIONARY_API SET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
 DICTIONARY_API SET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
 
