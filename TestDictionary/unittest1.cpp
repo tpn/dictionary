@@ -22,8 +22,10 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 // Define sample string macros and constants to help with testing.
 //
 
-#define MAKE_STRING(Name, Value)                                       \
-    static const LONG_STRING Name = CONSTANT_LONG_STRING((PBYTE)Value)
+#define MAKE_STRING(Name, Value)                                               \
+    static const LONG_STRING Name##String = CONSTANT_LONG_STRING((PBYTE)Value);\
+    static PCBYTE Name = Name##String.Buffer;                                  \
+    static ULONG Name##Length = Name##String.Length
 
 MAKE_STRING(Below, "below");
 MAKE_STRING(Elbow, "elbow");
@@ -126,7 +128,7 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Elbow.Buffer,
+                             Elbow,
                              &EntryCount)
             );
 
@@ -262,13 +264,13 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Elbow.Buffer,
+                             Elbow,
                              &EntryCount)
             );
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Elbow.Buffer,
+                             Elbow,
                              &EntryCount)
             );
 
@@ -441,7 +443,7 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Elbow.Buffer,
+                             Elbow,
                              &EntryCount)
             );
 
@@ -454,18 +456,18 @@ namespace TestDictionary
             );
 
             Assert::IsFalse(
-                strncmp((PCSZ)Elbow.Buffer,
+                strncmp((PCSZ)Elbow,
                         (PCSZ)Stats->CurrentLongestWord->Buffer,
-                        Elbow.Length)
+                        ElbowLength)
             );
 
             Assert::AreEqual(
-                (PCSZ)Elbow.Buffer,
+                (PCSZ)Elbow,
                 (PCSZ)Stats->CurrentLongestWord->Buffer
             );
 
             Assert::AreEqual(
-                (PCSZ)Elbow.Buffer,
+                (PCSZ)Elbow,
                 (PCSZ)Stats->LongestWordAllTime->Buffer
             );
 
@@ -504,7 +506,7 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Elbow.Buffer,
+                             Elbow,
                              &EntryCount)
             );
 
@@ -513,7 +515,7 @@ namespace TestDictionary
             Assert::IsTrue(
                 Api->GetWordAnagrams(Dictionary,
                                      Allocator,
-                                     Elbow.Buffer,
+                                     Elbow,
                                      &LinkedWordList)
             );
 
@@ -521,7 +523,7 @@ namespace TestDictionary
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
-                             Below.Buffer,
+                             Below,
                              &EntryCount)
             );
 
@@ -530,7 +532,7 @@ namespace TestDictionary
             Assert::IsTrue(
                 Api->GetWordAnagrams(Dictionary,
                                      Allocator,
-                                     Elbow.Buffer,
+                                     Elbow,
                                      &LinkedWordList)
             );
 
@@ -547,7 +549,7 @@ namespace TestDictionary
             WordEntry = &LinkedWordEntry->WordEntry;
 
             Assert::AreEqual(
-                (PCSZ)Below.Buffer,
+                (PCSZ)Below,
                 (PCSZ)WordEntry->String.Buffer
             );
 
@@ -570,8 +572,6 @@ namespace TestDictionary
             BOOLEAN IsProcessTerminating;
             LONGLONG EntryCount;
             BOOLEAN Exists;
-            PCBYTE Fox = QuickFox.Buffer;
-            PCBYTE Dog = LazyDog.Buffer;
 
             CreateFlags.AsULong = 0;
             IsProcessTerminating = TRUE;
@@ -589,82 +589,82 @@ namespace TestDictionary
 
             Assert::IsFalse(Api->FindWord(NULL, NULL, NULL));
             Assert::IsFalse(Api->FindWord(Dictionary, NULL, NULL));
-            Assert::IsFalse(Api->FindWord(Dictionary, Elbow.Buffer, NULL));
+            Assert::IsFalse(Api->FindWord(Dictionary, Elbow, NULL));
 
             //
             // Test "elbow".
             //
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Elbow.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
             Assert::IsFalse(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Elbow.Buffer, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
             Assert::IsTrue(EntryCount == 1);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Elbow.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
             Assert::IsTrue(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Elbow.Buffer, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Elbow.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
             Assert::IsTrue(Exists);
 
             //
             // Test "below".
             //
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Below.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Below, &Exists));
             Assert::IsFalse(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Below.Buffer, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Below, &EntryCount));
             Assert::IsTrue(EntryCount == 1);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Below.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Below, &Exists));
             Assert::IsTrue(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Below.Buffer, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Below, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Below.Buffer, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, Below, &Exists));
             Assert::IsTrue(Exists);
 
             //
             // Test quick fox...
             //
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Fox, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, QuickFox, &Exists));
             Assert::IsFalse(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Fox, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, QuickFox, &EntryCount));
             Assert::IsTrue(EntryCount == 1);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Fox, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, QuickFox, &Exists));
             Assert::IsTrue(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Fox, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, QuickFox, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Fox, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, QuickFox, &Exists));
             Assert::IsTrue(Exists);
 
             //
             // Test lazy dog...
             //
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Dog, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, LazyDog, &Exists));
             Assert::IsFalse(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Dog, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, LazyDog, &EntryCount));
             Assert::IsTrue(EntryCount == 1);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Dog, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, LazyDog, &Exists));
             Assert::IsTrue(Exists);
 
-            Assert::IsTrue(Api->AddWord(Dictionary, Dog, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, LazyDog, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
 
-            Assert::IsTrue(Api->FindWord(Dictionary, Dog, &Exists));
+            Assert::IsTrue(Api->FindWord(Dictionary, LazyDog, &Exists));
             Assert::IsTrue(Exists);
 
             Assert::IsTrue(
