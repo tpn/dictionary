@@ -563,4 +563,15 @@ StartXmm:
     return GenericEqual;
 }
 
+_Use_decl_annotations_
+BOOLEAN
+GetWordStats(
+    PDICTIONARY Dictionary,
+    PCBYTE Word,
+    PWORD_STATS Stats
+    )
+{
+    return FALSE;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

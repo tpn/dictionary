@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AddWord.c" />
+    <ClCompile Include="Anagram.c" />
     <ClCompile Include="DictionaryTls.c" />
     <ClCompile Include="FindWord.c" />
     <ClCompile Include="RemoveWord.c" />

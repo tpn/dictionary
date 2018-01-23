@@ -62,6 +62,9 @@
     <ClCompile Include="RemoveWord.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Anagram.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <!--
   <ItemGroup>

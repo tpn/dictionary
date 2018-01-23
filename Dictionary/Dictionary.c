@@ -268,16 +268,6 @@ Return Value:
     AcquireDictionaryLockExclusive(&Dictionary->Lock);
 
 
-    //
-    // Define a helper macro to improve the aesthetics of the nested loop
-    // enumeration code.
-    //
-
-#define FOR_EACH_ENTRY_IN_TABLE(Name, Type)                                 \
-    for (Name##TableEntry = (Type)EnumerateTable(&Name##Table->Avl, TRUE);  \
-         Name##TableEntry != NULL;                                          \
-         Name##TableEntry = (Type)EnumerateTable(&Name##Table->Avl, FALSE))
-
     FOR_EACH_ENTRY_IN_TABLE(Bitmap, PBITMAP_TABLE_ENTRY) {
 
         //

@@ -159,15 +159,56 @@ typedef struct _WORD_ENTRY {
 
     LONG_STRING String;
 
-    //
-    // Linked-list entry used for chaining anagrams together.
-    //
-
-    LIST_ENTRY AnagramListEntry;
-
 } WORD_ENTRY;
 typedef WORD_ENTRY *PWORD_ENTRY;
 typedef const WORD_ENTRY *PCWORD_ENTRY;
+
+
+//
+// Define the LINKED_WORD_LIST structure used to link anagrams together.
+//
+
+typedef struct _LINKED_WORD_LIST {
+
+    //
+    // Number of entries in the list.
+    //
+
+    LONGLONG NumberOfEntries;
+
+    //
+    // List head used to chain the underlying LINKED_WORD_ENTRY structures
+    // together via their ListEntry field.
+    //
+
+    LIST_ENTRY ListHead;
+
+} LINKED_WORD_LIST;
+typedef LINKED_WORD_LIST *PLINKED_WORD_LIST;
+
+//
+// Define the LINKED_WORD_ENTRY structure, which is used to chain anagrams
+// together via the LINKED_WORD_LIST structure.
+//
+
+typedef struct _LINKED_WORD_ENTRY {
+
+    //
+    // List entry used to append the word entry to the LINKED_WORD_LIST's
+    // ListHead field.
+    //
+
+    LIST_ENTRY ListEntry;
+
+    //
+    // Pointer to the word entry;
+    //
+
+    WORD_ENTRY WordEntry;
+
+} LINKED_WORD_ENTRY;
+typedef LINKED_WORD_ENTRY *PLINKED_WORD_ENTRY;
+typedef const LINKED_WORD_ENTRY *PCLINKED_WORD_ENTRY;
 
 //
 // Define the DICTIONARY_STATS interface.
@@ -231,7 +272,6 @@ BOOLEAN
 (NTAPI ADD_WORD)(
     _Inout_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
-    _Outptr_result_nullonfailure_ PCWORD_ENTRY *WordEntryPointer,
     _Outptr_ LONGLONG *EntryCountPointer
     );
 typedef ADD_WORD *PADD_WORD;
@@ -240,9 +280,9 @@ typedef
 _Success_(return != 0)
 BOOLEAN
 (NTAPI FIND_WORD)(
-    _Inout_ PDICTIONARY Dictionary,
+    _In_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
-    _Outptr_result_nullonfailure_ PCWORD_ENTRY *WordEntryPointer
+    _Outptr_ PBOOLEAN Exists
     );
 typedef FIND_WORD *PFIND_WORD;
 
@@ -255,6 +295,27 @@ BOOLEAN
     _Outptr_ LONGLONG *EntryCountPointer
     );
 typedef REMOVE_WORD *PREMOVE_WORD;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI GET_WORD_ANAGRAMS)(
+    _In_ PDICTIONARY Dictionary,
+    _In_ PALLOCATOR Allocator,
+    _In_z_ PCBYTE Word,
+    _Outptr_result_maybenull_ PLINKED_WORD_LIST *LinkedWordListPointer
+    );
+typedef GET_WORD_ANAGRAMS *PGET_WORD_ANAGRAMS;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI GET_WORD_STATS)(
+    _In_ PDICTIONARY Dictionary,
+    _In_z_ PCBYTE Word,
+    _Out_ PWORD_STATS Stats
+    );
+typedef GET_WORD_STATS *PGET_WORD_STATS;
 
 typedef
 _Success_(return != 0)
@@ -297,7 +358,7 @@ BOOLEAN
 typedef SET_MAXIMUM_WORD_LENGTH *PSET_MAXIMUM_WORD_LENGTH;
 
 //
-// Inline function for helping load the dictionary in a dynamic module context.
+// Define the main dictionary API structure.
 //
 
 typedef struct _DICTIONARY_FUNCTIONS {
@@ -316,6 +377,8 @@ typedef struct _DICTIONARY_FUNCTIONS {
     PADD_WORD AddWord;
     PFIND_WORD FindWord;
     PREMOVE_WORD RemoveWord;
+    PGET_WORD_STATS GetWordStats;
+    PGET_WORD_ANAGRAMS GetWordAnagrams;
     PGET_DICTIONARY_STATS GetDictionaryStats;
 
     //
@@ -329,6 +392,11 @@ typedef struct _DICTIONARY_FUNCTIONS {
 
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
+
+//
+// Inline function for helping load the dictionary in a dynamic module context.
+// See ScratchExe/main.c or TestDictionary/unittest1.cpp for examples.
+//
 
 FORCEINLINE
 BOOLEAN
@@ -350,6 +418,8 @@ LoadDictionaryModule(
         "AddWord",
         "FindWord",
         "RemoveWord",
+        "GetWordStats",
+        "GetWordAnagrams",
         "GetDictionaryStats",
 
         "CompareWords",
@@ -409,6 +479,8 @@ DICTIONARY_API DESTROY_DICTIONARY DestroyDictionary;
 DICTIONARY_API ADD_WORD AddWord;
 DICTIONARY_API FIND_WORD FindWord;
 DICTIONARY_API REMOVE_WORD RemoveWord;
+DICTIONARY_API GET_WORD_STATS GetWordStats;
+DICTIONARY_API GET_WORD_ANAGRAMS GetWordAnagrams;
 DICTIONARY_API GET_DICTIONARY_STATS GetDictionaryStats;
 
 DICTIONARY_API COMPARE_WORDS CompareWords;

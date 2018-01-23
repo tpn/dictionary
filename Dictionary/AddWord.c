@@ -17,7 +17,7 @@ Abstract:
 
 _Use_decl_annotations_
 BOOLEAN
-AddWord(
+AddWordEntry(
     PDICTIONARY Dictionary,
     PCBYTE Word,
     PCWORD_ENTRY *WordEntryPointer,
@@ -65,6 +65,7 @@ Return Value:
     PBYTE Buffer;
     ULONG Length;
     ULONG EntrySize;
+    ULONGLONG StringBytesUsed = 0;
     PULONG BitmapHash;
     PULONG HistogramHash;
     BOOLEAN NewWordEntry;
@@ -73,6 +74,7 @@ Return Value:
     BOOLEAN NewHistogramEntry;
     BOOLEAN IsNewCurrentLongestWord;
     BOOLEAN IsNewLongestWordAllTime;
+    PRTL_AVL_TABLE Avl;
     PALLOCATOR Allocator;
     PALLOCATOR WordAllocator;
     PLONG_STRING String;
@@ -88,6 +90,7 @@ Return Value:
     PCLONG_STRING CurrentLongestWord;
     PCLONG_STRING LongestWordAllTime;
     PTABLE_ENTRY_HEADER TableEntryHeader;
+    ULARGE_INTEGER TotalStringBufferAllocSize;
     PRTL_INITIALIZE_GENERIC_TABLE_AVL RtlInitializeGenericTableAvl;
     PRTL_INSERT_ELEMENT_GENERIC_TABLE_AVL RtlInsertElementGenericTableAvl;
 
@@ -114,10 +117,6 @@ Return Value:
     }
 
     if (!ARGUMENT_PRESENT(WordEntryPointer)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(EntryCountPointer)) {
         return FALSE;
     }
 
@@ -193,13 +192,6 @@ Return Value:
     DictionaryTlsSetContext(&Context);
 
     //
-    // Acquire the exclusive dictionary lock for the remaining duration of the
-    // routine.
-    //
-
-    AcquireDictionaryLockExclusive(&Dictionary->Lock);
-
-    //
     // Prepare a bitmap table entry for potential insertion into the bitmap
     // AVL table.
     //
@@ -273,7 +265,7 @@ Return Value:
     }
 
     //
-    // Update the TLS context and initialize the word entry table alias.
+    // Update the TLS context and initialize the word table alias.
     //
 
     Context.HistogramTableEntry = HistogramTableEntry;
@@ -346,6 +338,19 @@ Return Value:
         if (!Buffer) {
             goto Error;
         }
+
+        //
+        // Update the number of bytes allocated to string buffers in the
+        // current word table.  Because the high and low parts of the count
+        // are split, we need to do some LARGE_INTEGER juggling.
+        //
+
+        Avl = &WordTable->Avl;
+        TotalStringBufferAllocSize.LowPart = Avl->BytesAllocatedLowPart;
+        TotalStringBufferAllocSize.HighPart = Avl->BytesAllocatedHighPart;
+        TotalStringBufferAllocSize.QuadPart += (Length + 1);
+        Avl->BytesAllocatedLowPart = TotalStringBufferAllocSize.LowPart;
+        Avl->BytesAllocatedHighPart = TotalStringBufferAllocSize.HighPart;
 
         //
         // Copy the buffer, add the trailing NULL, switch the underlying word
@@ -491,7 +496,10 @@ Return Value:
     //
 
     *WordEntryPointer = WordEntry;
-    *EntryCountPointer = WordStats->EntryCount;
+
+    if (ARGUMENT_PRESENT(EntryCountPointer)) {
+        *EntryCountPointer = WordStats->EntryCount;
+    }
 
     //
     // Indicate success and jump to the end, we're done.
@@ -511,9 +519,74 @@ Return Value:
 
 End:
 
-    ReleaseDictionaryLockExclusive(&Dictionary->Lock);
+    return Success;
+}
 
-    DictionaryTlsSetContext(NULL);
+_Use_decl_annotations_
+BOOLEAN
+AddWord(
+    PDICTIONARY Dictionary,
+    PCBYTE Word,
+    PLONGLONG EntryCountPointer
+    )
+/*++
+
+Routine Description:
+
+    Adds a word to a dictionary if it doesn't exist, increments the word's
+    existing count if it does.  Returns the entry count for the word.
+
+    N.B. The word may also be registered as the current and all-time longest
+         word associated with the dictionary.
+
+Arguments:
+
+    Dictionary - Supplies a pointer to a DICTIONARY structure to which the
+        word is to be added.
+
+    Word - Supplies a NULL-terminated array of bytes to add to the dictionary.
+        The length of the array must be between the minimum and maximum lengths
+        configured for the dictionary, otherwise the word will be rejected and
+        this routine will return FALSE.
+
+    EntryCountPointer - Supplies an address to a variable that receives the
+        current entry count associated with the word at the time that it was
+        added to the directory.  Set to zero on error.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+--*/
+{
+    BOOLEAN Success;
+    PWORD_ENTRY WordEntry;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Dictionary)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(Word)) {
+        return FALSE;
+    }
+
+    //
+    // Obtain an exclusive lock on the dictionary.
+    //
+
+    AcquireDictionaryLockExclusive(&Dictionary->Lock);
+
+    Success = AddWordEntry(Dictionary, Word, &WordEntry, EntryCountPointer);
+
+    //
+    // Release the lock and return.
+    //
+
+    ReleaseDictionaryLockExclusive(&Dictionary->Lock);
 
     return Success;
 }

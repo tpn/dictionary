@@ -2877,24 +2877,8 @@ typedef VOID (NTAPI *PRTL_AVL_FREE_ROUTINE)(
     _In_ __drv_freesMem(Mem) _Post_invalid_ PVOID Buffer
     );
 
-typedef struct _RTL_AVL_TABLE {
-    RTL_BALANCED_LINKS BalancedRoot;
-    PVOID OrderedPointer;
-    ULONG WhichOrderedElement;
-    ULONG NumberGenericTableElements;
-    ULONG DepthOfTree;
-    ULONG Unused1;
-    PRTL_BALANCED_LINKS RestartKey;
-    ULONG DeleteCount;
-    ULONG Unused2;
-    PRTL_AVL_COMPARE_ROUTINE CompareRoutine;
-    PRTL_AVL_ALLOCATE_ROUTINE AllocateRoutine;
-    PRTL_AVL_FREE_ROUTINE FreeRoutine;
-    PVOID TableContext;
-} RTL_AVL_TABLE, *PRTL_AVL_TABLE;
-C_ASSERT(FIELD_OFFSET(RTL_AVL_TABLE, OrderedPointer) == 32);
-C_ASSERT(sizeof(RTL_AVL_TABLE) == 32+8+4+4+4+4+8+4+4+8+8+8+8);
-C_ASSERT(sizeof(RTL_AVL_TABLE) == 104);
+struct _RTL_AVL_TABLE;
+typedef struct _RTL_AVL_TABLE *PRTL_AVL_TABLE;
 
 typedef NTSTATUS (NTAPI *PRTL_AVL_MATCH_FUNCTION)(
     _In_ struct _RTL_AVL_TABLE *Table,
@@ -2974,7 +2958,7 @@ typedef PVOID (NTAPI *PRTL_GET_ELEMENT_GENERIC_TABLE_AVL)(
     _In_ ULONG I
     );
 
-typedef PVOID (NTAPI *PRTL_NUMBER_GENERIC_TABLE_ELEMENTS_AVL)(
+typedef ULONG (NTAPI *PRTL_NUMBER_GENERIC_TABLE_ELEMENTS_AVL)(
     _In_ PRTL_AVL_TABLE Table
     );
 
