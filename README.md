@@ -112,7 +112,7 @@ potential issues when crossing page boundaries.
 The AddWord() routine is mostly finished and works, it just needs to have some
 logic added to it to deal with registering as the longest string if applicable.
 
-Hours: 8.65 (3.03, 5.62)
+Hours: 9.67 (3.03, 5.62, 1.02)
 
 ## Day 5
 
