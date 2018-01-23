@@ -114,4 +114,49 @@ logic added to it to deal with registering as the longest string if applicable.
 
 Hours: 8.65 (3.03, 5.62)
 
+## Day 5
+
+[Main commit of the day's
+progress](https://github.com/tpn/dictionary/commit/013bdbe7c10f8e5f81060831e9934f21d9997a09)
+was quite sizable.  First pass at the
+[Anagram](https://github.com/tpn/dictionary/blob/v0.5/Dictionary/Anagram.c)
+module, which implements the `GetWordAnagrams()` function.
+
+Also implemented the word finding functionality via the
+[FindWord](https://github.com/tpn/dictionary/blob/v0.5/Dictionary/FindWord.c)
+module.
+
+No major design decision changes, two minor ones:
+
+1. Decided to commit to hiding the WORD_ENTRY implementation details and only
+   exporting public functions that work against the PCBYTE arrays (i.e.
+   `unsigned char *`'s representing the words).  This means none of the public
+   functions ever see the addresses of data structures allocated internally
+   by the diciontary; if they want to obtain values that require memory
+   allocation, the function now requires an Allocator parameter, and all
+   user memory required to return results is done via that.
+
+   This was done for two primary reasons: a) returning internal addresses
+   wouldn't work if this was a kernel module; data would need to be transferred
+   into a buffer provided by the user, and b) it defeated the thread-safe
+   locking provided by the dictionary when used via the public API.
+
+2. Continued to abuse spare fields in the Rtl structures, this time leveraging
+   two unused ULONGs in the RTL_AVL_TABLE layout to track the total number of
+   bytes allocated by a given word table.  This is leveraged by the anagram
+   logic to optimize how we determine the amount of memory to allocate to
+   contain the anagram list.  (We want to perform a single allocation call so
+   that the user can eventually free the resulting pointer with a single free
+   call.)
+
+
+Other than that everything appears to be behaving quite nicely and the original
+design decisions have held up nicely (bitmap -> histogram -> word table).
+
+Last major piece remaining is implementing RemoveWord().  This will be a little
+fiddly due to the requirement to track current and all-time longest lengths of
+words at the dictionary level.
+
+Hours: 10.02 (3.4, 3.57, 3.05).
+
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
