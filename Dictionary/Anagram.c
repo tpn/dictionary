@@ -63,7 +63,6 @@ Return Value:
     PCBYTE Bytes;
     ULONG Index;
     ULONG Count = 0;
-    ULONG Found = 0;
     ULONG Total;
     ULONG Length;
     ULONG LengthCollisions = 0;
@@ -343,12 +342,6 @@ Return Value:
         }
 
         //
-        // Increment our counter of found items.
-        //
-
-        Found++;
-
-        //
         // The histogram matches, therefore this is a valid anagram.  Carve
         // out the relevant structures from our buffer and wire everything
         // up to the anagram list.
@@ -398,7 +391,7 @@ Return Value:
     ExpectedStructBuffer = (
         Buffer +
         sizeof(ANAGRAM_LIST) +
-        (sizeof(LINKED_WORD_ENTRY) * Found)
+        (sizeof(LINKED_WORD_ENTRY) * Anagrams->NumberOfEntries)
     );
 
     ExpectedStringBuffer = (
