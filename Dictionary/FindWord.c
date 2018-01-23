@@ -102,10 +102,9 @@ Return Value:
     Rtl = Dictionary->Rtl;
     RtlLookupElementGenericTableAvl = Rtl->RtlLookupElementGenericTableAvl;
 
-    WordTableEntry = HEADER_TO_WORD_TABLE_ENTRY(&WordTableEntryHeader);
-    BitmapTableEntry = HEADER_TO_BITMAP_TABLE_ENTRY(&BitmapTableEntryHeader);
-    HistogramTableEntry =
-        HEADER_TO_HISTOGRAM_TABLE_ENTRY(&HistogramTableEntryHeader);
+    WordTableEntry = &WordTableEntryHeader.WordTableEntry;
+    BitmapTableEntry = &BitmapTableEntryHeader.BitmapTableEntry;
+    HistogramTableEntry = &HistogramTableEntryHeader.HistogramTableEntry;
 
     String = &WordTableEntry->WordEntry.String;
     BitmapHash = &BitmapTableEntryHeader.Hash;
