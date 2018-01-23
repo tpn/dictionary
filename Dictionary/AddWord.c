@@ -75,7 +75,6 @@ Return Value:
     BOOLEAN IsNewCurrentLongestWord;
     BOOLEAN IsNewLongestWordAllTime;
     PRTL_AVL_TABLE Avl;
-    PALLOCATOR Allocator;
     PALLOCATOR WordAllocator;
     PLONG_STRING String;
     PWORD_TABLE WordTable;
@@ -333,7 +332,7 @@ Return Value:
 
         Length = WordEntry->String.Length;
 
-        Buffer = (PBYTE)WordAllocator->Malloc(Allocator, Length + 1);
+        Buffer = (PBYTE)WordAllocator->Calloc(WordAllocator, 1, Length + 1);
 
         if (!Buffer) {
             goto Error;
