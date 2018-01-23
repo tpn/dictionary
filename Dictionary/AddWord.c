@@ -141,16 +141,14 @@ Return Value:
     //
 
     Rtl = Dictionary->Rtl;
-    Allocator = Dictionary->Allocator;
     WordAllocator = Dictionary->WordAllocator;
     RtlInitializeGenericTableAvl = Rtl->RtlInitializeGenericTableAvl;
     RtlInsertElementGenericTableAvl = Rtl->RtlInsertElementGenericTableAvl;
 
-    WordTableEntry = HEADER_TO_WORD_TABLE_ENTRY(&WordTableEntryHeader);
-    LengthTableEntry = HEADER_TO_LENGTH_TABLE_ENTRY(&LengthTableEntryHeader);
-    BitmapTableEntry = HEADER_TO_BITMAP_TABLE_ENTRY(&BitmapTableEntryHeader);
-    HistogramTableEntry =
-        HEADER_TO_HISTOGRAM_TABLE_ENTRY(&HistogramTableEntryHeader);
+    WordTableEntry = &WordTableEntryHeader.WordTableEntry;
+    LengthTableEntry = &LengthTableEntryHeader.LengthTableEntry;
+    BitmapTableEntry = &BitmapTableEntryHeader.BitmapTableEntry;
+    HistogramTableEntry = &HistogramTableEntryHeader.HistogramTableEntry;
 
     String = &WordTableEntry->WordEntry.String;
     BitmapHash = &BitmapTableEntryHeader.Hash;
@@ -320,6 +318,7 @@ Return Value:
     }
 
     WordEntry = &WordTableEntry->WordEntry;
+    String = &WordEntry->String;
 
     if (NewWordEntry) {
 

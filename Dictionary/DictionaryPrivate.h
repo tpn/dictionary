@@ -51,105 +51,6 @@ typedef SRWLOCK DICTIONARY_LOCK;
 #define ReleaseDictionaryLockExclusive ReleaseSRWLockExclusive
 
 //
-// Define a generic table entry structure.  This mimics the layout of the table
-// entry header (essentially, a RTL_BALANCED_LINKS structure) used by the AVL
-// table routines.
-//
-
-typedef struct _TABLE_ENTRY_HEADER {
-
-    union {
-
-        //
-        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
-        // of the structure normally used for padding for our own purposes.
-        //
-
-        struct {
-
-            struct _RTL_BALANCED_LINKS *Parent;
-            struct _RTL_BALANCED_LINKS *LeftChild;
-            struct _RTL_BALANCED_LINKS *RightChild;
-
-            union {
-                struct {
-                    CHAR Balance;
-                    UCHAR Reserved[3];
-                };
-            };
-
-            //
-            // For bitmaps, histograms and word table entries, we stash the
-            // 32-bit CRC32 of the data in the following field.  For length
-            // entries, the length is stored.
-            //
-
-            union {
-                ULONG Hash;
-                ULONG Value;
-                ULONG Length;
-            };
-        };
-
-        RTL_BALANCED_LINKS BalancedLinks;
-
-        //
-        // Include RTL_SPLAY_LINKS which has the same pointer layout as the
-        // start of RTL_BALANCED_LINKS, which allows us to use the predecessor
-        // and successor Rtl functions.
-        //
-
-        RTL_SPLAY_LINKS SplayLinks;
-    };
-
-    //
-    // The AVL routines will position our node-specific data at the offset
-    // represented by this next field.  UserData essentially represents the
-    // first 8 bytes of our custom table entry node data.  It is cast directly
-    // to the various table entry subtypes (for bitmaps, histograms etc).
-    //
-
-    ULONGLONG UserData;
-
-} TABLE_ENTRY_HEADER;
-typedef TABLE_ENTRY_HEADER *PTABLE_ENTRY_HEADER;
-
-//
-// Provide convenience macros for casting back and forth between table entry
-// headers and the underlying entries.  Particularly useful in the AVL table
-// comparison routine callbacks where we'll typically want to access the hash
-// values embedded in the header.
-//
-
-#define TABLE_ENTRY_TO_HEADER(Entry)                             \
-    ((PTABLE_ENTRY_HEADER)(                                      \
-        RtlOffsetToPointer(                                      \
-            Entry,                                               \
-            -((SHORT)FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData)) \
-        )                                                        \
-    ))
-
-#define HEADER_TO_TABLE_ENTRY(Header, Type)            \
-    ((Type)(                                           \
-        RtlOffsetToPointer(                            \
-            Header,                                    \
-            FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData) \
-        )                                              \
-    ))
-
-#define HEADER_TO_WORD_TABLE_ENTRY(Header) \
-    HEADER_TO_TABLE_ENTRY(Header, PWORD_TABLE_ENTRY)
-
-#define HEADER_TO_LENGTH_TABLE_ENTRY(Header) \
-    HEADER_TO_TABLE_ENTRY(Header, PLENGTH_TABLE_ENTRY)
-
-#define HEADER_TO_BITMAP_TABLE_ENTRY(Header) \
-    HEADER_TO_TABLE_ENTRY(Header, PBITMAP_TABLE_ENTRY)
-
-#define HEADER_TO_HISTOGRAM_TABLE_ENTRY(Header) \
-    HEADER_TO_TABLE_ENTRY(Header, PHISTOGRAM_TABLE_ENTRY)
-
-//
 // Define character bitmap and histogram structures and supporting function
 // typedefs.
 //
@@ -350,6 +251,99 @@ typedef struct _BITMAP_TABLE_ENTRY {
     HISTOGRAM_TABLE HistogramTable;
 } BITMAP_TABLE_ENTRY;
 typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
+
+//
+// Define a generic table entry structure.  This mimics the layout of the table
+// entry header (essentially, a RTL_BALANCED_LINKS structure) used by the AVL
+// table routines.
+//
+
+typedef struct _TABLE_ENTRY_HEADER {
+
+    union {
+
+        //
+        // Inline RTL_BALANCED_LINKS structure and abuse the ULONG at the end
+        // of the structure normally used for padding for our own purposes.
+        //
+
+        struct {
+
+            struct _RTL_BALANCED_LINKS *Parent;
+            struct _RTL_BALANCED_LINKS *LeftChild;
+            struct _RTL_BALANCED_LINKS *RightChild;
+
+            union {
+
+                struct {
+                    CHAR Balance;
+                    UCHAR Reserved[3];
+                };
+
+                struct {
+                    ULONG BalanceBits:8;
+                    ULONG ReservedBits:24;
+                };
+
+            };
+
+            //
+            // For bitmaps, histograms and word table entries, we stash the
+            // 32-bit CRC32 of the data in the following field.  For length
+            // entries, the length is stored.
+            //
+
+            union {
+                ULONG Hash;
+                ULONG Value;
+                ULONG Length;
+            };
+        };
+
+        RTL_BALANCED_LINKS BalancedLinks;
+
+        //
+        // Include RTL_SPLAY_LINKS which has the same pointer layout as the
+        // start of RTL_BALANCED_LINKS, which allows us to use the predecessor
+        // and successor Rtl functions.
+        //
+
+        RTL_SPLAY_LINKS SplayLinks;
+    };
+
+    //
+    // The AVL routines will position our node-specific data at the offset
+    // represented by this next field.  UserData essentially represents the
+    // first 8 bytes of our custom table entry node data.  It is cast directly
+    // to the various table entry subtypes (for bitmaps, histograms etc).
+    //
+
+    union {
+        ULONGLONG UserData;
+        struct _WORD_TABLE_ENTRY WordTableEntry;
+        struct _LENGTH_TABLE_ENTRY LengthTableEntry;
+        struct _BITMAP_TABLE_ENTRY BitmapTableEntry;
+        struct _HISTOGRAM_TABLE_ENTRY HistogramTableEntry;
+    };
+
+} TABLE_ENTRY_HEADER;
+typedef TABLE_ENTRY_HEADER *PTABLE_ENTRY_HEADER;
+C_ASSERT(FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData) == 32);
+
+//
+// Provide convenience macros for casting back and forth between table entry
+// headers and the underlying entries.  Particularly useful in the AVL table
+// comparison routine callbacks where we'll typically want to access the hash
+// values embedded in the header.
+//
+
+#define TABLE_ENTRY_TO_HEADER(Entry)                             \
+    ((PTABLE_ENTRY_HEADER)(                                      \
+        RtlOffsetToPointer(                                      \
+            Entry,                                               \
+            -((SHORT)FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData)) \
+        )                                                        \
+    ))
 
 //
 // Define the anagram word list structure used to link anagrams together.
