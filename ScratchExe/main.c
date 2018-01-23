@@ -25,6 +25,13 @@ PDICTIONARY_FUNCTIONS Api;
 
 HMODULE GlobalModule = 0;
 
+#ifndef ASSERT
+#define ASSERT(Condition)   \
+    if (!(Condition)) {     \
+        __debugbreak();     \
+    }
+#endif
+
 VOID
 Scratch2(
     PRTL Rtl,
@@ -32,85 +39,53 @@ Scratch2(
     PDICTIONARY_FUNCTIONS Api
     )
 {
-    BOOLEAN Success;
     DICTIONARY_CREATE_FLAGS CreateFlags;
     PDICTIONARY Dictionary;
     BOOLEAN IsProcessTerminating;
     LONGLONG EntryCount;
+    PDICTIONARY_STATS Stats;
 
     CreateFlags.AsULong = 0;
     IsProcessTerminating = FALSE;
 
-    Success = Api->CreateDictionary(Rtl,
+    ASSERT(Api->CreateDictionary(Rtl,
                                     Allocator,
                                     CreateFlags,
-                                    &Dictionary);
+                                    &Dictionary));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "elbow",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
+    ASSERT(Api->GetDictionaryStats(Dictionary,
+                                      Allocator,
+                                      &Stats));
 
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "elbow",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "elbow",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "below",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "below",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "The quick brown fox jumped over the lazy dog.",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->AddWord(Dictionary,
+    ASSERT(Api->AddWord(Dictionary,
                            "The quick brown fox jumped over the lazy dog.",
-                           &EntryCount);
+                           &EntryCount));
 
-    if (!Success) {
-        __debugbreak();
-    }
-
-    Success = Api->DestroyDictionary(&Dictionary, &IsProcessTerminating);
-
-    if (!Success) {
-        __debugbreak();
-    }
+    ASSERT(Api->DestroyDictionary(&Dictionary, &IsProcessTerminating));
 
     return;
 }
