@@ -178,7 +178,7 @@ InitializeWord(
     if (NumberOfDoubleWords) {
 
         //
-        // There's at least 4 bytes of data.
+        // Process as many 4 byte chunks as we can.
         //
 
         for (Index = 0; Index < NumberOfDoubleWords; Index++) {
@@ -188,24 +188,38 @@ InitializeWord(
 
     if (TrailingBytes) {
 
+        //
+        // There are between 1 and 3 bytes remaining at the end of the string.
+        // We can't use _mm_crc32_u32() here directly on the last ULONG as we
+        // will include the bytes past the end of the string, which will be
+        // random and will affect our hash value.  So, load we load the last
+        // ULONG then zero out the high bits that we want to ignore using the
+        // _bzhi_u32() intrinsic.  This ensures only the bytes that are part
+        // of the input string participate in the hash value calculation.
+        //
+
         ULONG Last = 0;
-        PBYTE Dest = (PBYTE)&Last;
-        PBYTE Source = (PBYTE)&DoubleWords[NumberOfDoubleWords];
+        ULONG HighBits;
 
         //
-        // N.B. __movsb() needs to be used here in order to prevent the
-        //      the compiler from inserting a memcpy if a manual for loop
-        //      was done to copy the trailing bytes, e.g.:
-        //
-        //          for (Index = 0; Index < TrailingBytes; Index++) {
-        //              *Dest++ = Source[Index];
-        //          }
-        //
-        //      As we don't link with the CRT, no memcpy symbol will be
-        //      available and as such, this module won't compile.
+        // (Sanity check we can math.)
         //
 
-        __movsb(Dest, Source, TrailingBytes);
+        ASSERT(TrailingBytes >= 1 && TrailingBytes <= 3);
+
+        //
+        // Initialize our HighBits to the number of bits in a ULONG (32),
+        // then subtract the number of bits represented by TrailingBytes.
+        //
+
+        HighBits = sizeof(ULONG) << 3;
+        HighBits -= (TrailingBytes << 3);
+
+        //
+        // Load the last ULONG, zero out the high bits, then hash.
+        //
+
+        Last = _bzhi_u32(DoubleWords[NumberOfDoubleWords], HighBits);
         StringHash = _mm_crc32_u32(StringHash, Last);
     }
 
