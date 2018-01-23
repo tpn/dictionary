@@ -25,49 +25,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #define MAKE_STRING(Name, Value)                                       \
     static const LONG_STRING Name = CONSTANT_LONG_STRING((PBYTE)Value)
 
-#define MAKE_BYTES(Value) ((PCBYTE)Value)
-
-#ifndef UNUSED_PARAMETER
-#define UNUSED_PARAMETER(Name) ((VOID)Name)
-#endif
-
-#define STRING_DECL(Name)                    \
-    PCLONG_STRING Name##String = &##Name;    \
-    ULONG Name##HistogramHash32;             \
-    ULONGLONG Name##HistogramHash64;         \
-    CHARACTER_BITMAP Name##Bitmap;           \
-    CHARACTER_HISTOGRAM Name##Histogram;     \
-    UNUSED_PARAMETER(Name##Bitmap);          \
-    UNUSED_PARAMETER(Name##Histogram);       \
-    UNUSED_PARAMETER(Name##HistogramHash32); \
-    UNUSED_PARAMETER(Name##HistogramHash64)
-
-#define MAKE_BITMAP(Name)               \
-    Assert::IsTrue(                     \
-        CreateCharacterBitmapForString( \
-            Name##String,               \
-            &Name##Bitmap               \
-        )                               \
-    )
-
-#define MAKE_HISTOGRAM_HASH32(Name)              \
-    Assert::IsTrue(                              \
-        CreateCharacterHistogramForStringHash32( \
-            Name##String,                        \
-            &Name##Histogram,                    \
-            &##Name##HistogramHash32             \
-        )                                        \
-    )
-
-#define MAKE_HISTOGRAM_HASH64(Name)              \
-    Assert::IsTrue(                              \
-        CreateCharacterHistogramForStringHash64( \
-            Name##String,                        \
-            &Name##Histogram,                    \
-            &##Name##HistogramHash64             \
-        )                                        \
-    )
-
 MAKE_STRING(Below, "below");
 MAKE_STRING(Elbow, "elbow");
 MAKE_STRING(QuickFox, "The quick brown fox jumps over the lazy dog.");
@@ -155,7 +112,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -171,7 +127,6 @@ namespace TestDictionary
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
                              Elbow.Buffer,
-                             &WordEntry,
                              &EntryCount)
             );
 
@@ -190,7 +145,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -206,11 +160,9 @@ namespace TestDictionary
             Assert::IsFalse(
                 Api->AddWord(Dictionary,
                              (PCBYTE)"",
-                             &WordEntry,
                              &EntryCount)
             );
 
-            Assert::IsTrue(WordEntry == NULL);
             Assert::IsTrue(EntryCount == 0);
 
             Assert::IsTrue(
@@ -226,7 +178,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -244,11 +195,9 @@ namespace TestDictionary
             Assert::IsFalse(
                 Api->AddWord(Dictionary,
                              (PCBYTE)"a",
-                             &WordEntry,
                              &EntryCount)
             );
 
-            Assert::IsTrue(WordEntry == NULL);
             Assert::IsTrue(EntryCount == 0);
 
             Assert::IsTrue(
@@ -264,7 +213,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -282,11 +230,9 @@ namespace TestDictionary
             Assert::IsFalse(
                 Api->AddWord(Dictionary,
                              (PCBYTE)"abc",
-                             &WordEntry,
                              &EntryCount)
             );
 
-            Assert::IsTrue(WordEntry == NULL);
             Assert::IsTrue(EntryCount == 0);
 
             Assert::IsTrue(
@@ -302,7 +248,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
@@ -318,14 +263,12 @@ namespace TestDictionary
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
                              Elbow.Buffer,
-                             &WordEntry,
                              &EntryCount)
             );
 
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
                              Elbow.Buffer,
-                             &WordEntry,
                              &EntryCount)
             );
 
@@ -349,7 +292,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
             PCBYTE Strings[] = {
                 (PCBYTE)"a\0b",
@@ -375,7 +317,6 @@ namespace TestDictionary
                 Assert::IsTrue(
                     Api->AddWord(Dictionary,
                                  String,
-                                 &WordEntry,
                                  &EntryCount)
                 );
 
@@ -396,7 +337,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
             PCBYTE Strings[] = {
                 (PCBYTE)"abcd\0e",
@@ -422,7 +362,6 @@ namespace TestDictionary
                 Assert::IsTrue(
                     Api->AddWord(Dictionary,
                                  String,
-                                 &WordEntry,
                                  &EntryCount)
                 );
 
@@ -443,7 +382,6 @@ namespace TestDictionary
             DICTIONARY_CREATE_FLAGS CreateFlags;
             PDICTIONARY Dictionary;
             BOOLEAN IsProcessTerminating;
-            PCWORD_ENTRY WordEntry;
             LONGLONG EntryCount;
             PCBYTE Strings[] = {
                 (PCBYTE)"abcd1\0e",
@@ -469,7 +407,6 @@ namespace TestDictionary
                 Assert::IsTrue(
                     Api->AddWord(Dictionary,
                                  String,
-                                 &WordEntry,
                                  &EntryCount)
                 );
 
@@ -486,15 +423,11 @@ namespace TestDictionary
 
         TEST_METHOD(GetDictionaryStats1)
         {
-            DICTIONARY_CREATE_FLAGS CreateFlags;
+            LONGLONG EntryCount;
             PDICTIONARY Dictionary;
             PDICTIONARY_STATS Stats;
-            RTL_GENERIC_COMPARE_RESULTS Comparison;
-
+            DICTIONARY_CREATE_FLAGS CreateFlags;
             BOOLEAN IsProcessTerminating;
-
-            PCWORD_ENTRY WordEntry;
-            LONGLONG EntryCount;
 
             CreateFlags.AsULong = 0;
             IsProcessTerminating = TRUE;
@@ -509,7 +442,6 @@ namespace TestDictionary
             Assert::IsTrue(
                 Api->AddWord(Dictionary,
                              Elbow.Buffer,
-                             &WordEntry,
                              &EntryCount)
             );
 
@@ -521,17 +453,107 @@ namespace TestDictionary
                                         &Stats)
             );
 
-            Comparison = Api->CompareWords(Stats->CurrentLongestWord,
-                                           &WordEntry->String);
+            Assert::IsFalse(
+                strncmp((PCSZ)Elbow.Buffer,
+                        (PCSZ)Stats->CurrentLongestWord->Buffer,
+                        Elbow.Length)
+            );
 
-            Assert::IsTrue(Comparison == GenericEqual);
+            Assert::AreEqual(
+                (PCSZ)Elbow.Buffer,
+                (PCSZ)Stats->CurrentLongestWord->Buffer
+            );
 
-            Comparison = Api->CompareWords(Stats->LongestWordAllTime,
-                                           &WordEntry->String);
-
-            Assert::IsTrue(Comparison == GenericEqual);
+            Assert::AreEqual(
+                (PCSZ)Elbow.Buffer,
+                (PCSZ)Stats->LongestWordAllTime->Buffer
+            );
 
             Allocator->FreePointer(Allocator, (PPVOID)&Stats);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(GetWordAnagrams1)
+        {
+            LONGLONG EntryCount;
+            PLIST_ENTRY ListEntry;
+            PDICTIONARY Dictionary;
+            PCWORD_ENTRY WordEntry;
+            PLINKED_WORD_LIST LinkedWordList;
+            PLINKED_WORD_ENTRY LinkedWordEntry;
+
+            BOOLEAN IsProcessTerminating;
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             Elbow.Buffer,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(
+                Api->GetWordAnagrams(Dictionary,
+                                     Allocator,
+                                     Elbow.Buffer,
+                                     &LinkedWordList)
+            );
+
+            Assert::IsTrue(LinkedWordList == NULL);
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             Below.Buffer,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(
+                Api->GetWordAnagrams(Dictionary,
+                                     Allocator,
+                                     Elbow.Buffer,
+                                     &LinkedWordList)
+            );
+
+            Assert::IsTrue(LinkedWordList != NULL);
+            Assert::IsTrue(LinkedWordList->NumberOfEntries == 1);
+            Assert::IsFalse(IsListEmpty(&LinkedWordList->ListHead));
+
+            ListEntry = RemoveHeadList(&LinkedWordList->ListHead);
+
+            LinkedWordEntry = CONTAINING_RECORD(ListEntry,
+                                                LINKED_WORD_ENTRY,
+                                                ListEntry);
+
+            WordEntry = &LinkedWordEntry->WordEntry;
+
+            Assert::AreEqual(
+                (PCSZ)Below.Buffer,
+                (PCSZ)WordEntry->String.Buffer
+            );
+
+            Assert::IsTrue(IsListEmpty(&LinkedWordList->ListHead));
+
+            Allocator->FreePointer(Allocator, (PPVOID)&LinkedWordList);
 
             Assert::IsTrue(
                 Api->DestroyDictionary(

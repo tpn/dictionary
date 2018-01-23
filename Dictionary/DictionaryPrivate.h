@@ -70,8 +70,13 @@ typedef struct _TABLE_ENTRY_HEADER {
             struct _RTL_BALANCED_LINKS *Parent;
             struct _RTL_BALANCED_LINKS *LeftChild;
             struct _RTL_BALANCED_LINKS *RightChild;
-            CHAR Balance;
-            UCHAR Reserved[3];
+
+            union {
+                struct {
+                    CHAR Balance;
+                    UCHAR Reserved[3];
+                };
+            };
 
             //
             // For bitmaps, histograms and word table entries, we stash the
@@ -159,6 +164,7 @@ typedef union DECLSPEC_ALIGN(32) _CHARACTER_BITMAP {
      XMMWORD Xmm[2];
      LONG Bits[NUMBER_OF_CHARACTER_BITS_IN_DOUBLEWORDS];
 } CHARACTER_BITMAP;
+C_ASSERT(sizeof(CHARACTER_BITMAP) == 32);
 typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
 typedef const CHARACTER_BITMAP *PCCHARACTER_BITMAP;
 
@@ -167,6 +173,7 @@ typedef union DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM {
     XMMWORD Xmm[64];
     ULONG Counts[NUMBER_OF_CHARACTER_BITS];
 } CHARACTER_HISTOGRAM;
+C_ASSERT(sizeof(CHARACTER_HISTOGRAM) == 1024);
 typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
 typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
 
@@ -212,6 +219,60 @@ RTL_GENERIC_COMPARE_RESULTS
     PVOID FirstStruct,
     PVOID SecondStruct
     );
+
+
+//
+// Define the RTL_AVL_TABLE structure.  This mirrors the layout of the structure
+// defined by the NT kernel, however, we utilize two unused ULONGs for our own
+// purposes (tracking information about the table such as bytes allocated).
+//
+
+typedef struct _RTL_AVL_TABLE {
+    RTL_BALANCED_LINKS BalancedRoot;
+    PVOID OrderedPointer;
+    ULONG WhichOrderedElement;
+    ULONG NumberGenericTableElements;
+    ULONG DepthOfTree;
+
+    union {
+        ULONG Unused1;
+        ULONG BytesAllocatedLowPart;
+    };
+
+    PRTL_BALANCED_LINKS RestartKey;
+    ULONG DeleteCount;
+
+    union {
+        ULONG Unused2;
+        ULONG BytesAllocatedHighPart;
+    };
+
+    PRTL_AVL_COMPARE_ROUTINE CompareRoutine;
+    PRTL_AVL_ALLOCATE_ROUTINE AllocateRoutine;
+    PRTL_AVL_FREE_ROUTINE FreeRoutine;
+
+    //
+    // Our AVL tables always use the dictionary as the table context.
+    //
+
+    union {
+        PVOID TableContext;
+        PDICTIONARY Dictionary;
+    };
+} RTL_AVL_TABLE, *PRTL_AVL_TABLE;
+C_ASSERT(FIELD_OFFSET(RTL_AVL_TABLE, OrderedPointer) == 32);
+C_ASSERT(sizeof(RTL_AVL_TABLE) == 32+8+4+4+4+4+8+4+4+8+8+8+8);
+C_ASSERT(sizeof(RTL_AVL_TABLE) == 104);
+
+//
+// Define a helper macro to for table entry enumeration.
+//
+
+#define FOR_EACH_ENTRY_IN_TABLE(Name, Type)                                 \
+    for (Name##TableEntry = (Type)EnumerateTable(&Name##Table->Avl, TRUE);  \
+         Name##TableEntry != NULL;                                          \
+         Name##TableEntry = (Type)EnumerateTable(&Name##Table->Avl, FALSE))
+
 
 //
 // Define the length table.  We need to track word lengths in an ordered data
@@ -289,6 +350,54 @@ typedef struct _BITMAP_TABLE_ENTRY {
     HISTOGRAM_TABLE HistogramTable;
 } BITMAP_TABLE_ENTRY;
 typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
+
+//
+// Define the anagram word list structure used to link anagrams together.
+// This is identical to the LINKED_WORD_LIST public structure with the addition
+// of a bitmap and histogram plus respective hashes at the end of the structure.
+//
+
+
+typedef struct _ANAGRAM_LIST {
+
+    union {
+
+        //
+        // Inline LINKED_WORD_LIST structure.
+        //
+
+        struct {
+            LONGLONG NumberOfEntries;
+            LIST_ENTRY ListHead;
+        };
+
+        LINKED_WORD_LIST LinkedWordList;
+    };
+
+    //
+    // Pointer to the word table entry for which anagrams are being collected.
+    //
+
+    PWORD_TABLE_ENTRY WordTableEntry;
+
+    //
+    // Hashes for the bitmap and histogram.
+    //
+
+    ULONG BitmapHash;
+    ULONG HistogramHash;
+
+    //
+    // The actual bitmap and histogram for this word table entry.
+    //
+
+    CHARACTER_BITMAP Bitmap;
+
+    CHARACTER_HISTOGRAM Histogram;
+
+} ANAGRAM_LIST;
+typedef ANAGRAM_LIST *PANAGRAM_LIST;
+
 
 //
 // The default dictionary minimum and maximum word lengths are 1 byte and
@@ -495,6 +604,37 @@ typedef struct _DICTIONARY_CONTEXT {
 typedef DICTIONARY_CONTEXT *PDICTIONARY_CONTEXT;
 
 extern ULONG DictionaryTlsIndex;
+
+//
+// Function typedefs for private functions.
+//
+
+typedef
+_Success_(return != 0)
+_Requires_shared_lock_held_(Dictionary->Lock)
+BOOLEAN
+(NTAPI FIND_WORD_TABLE_ENTRY)(
+    _In_ PDICTIONARY Dictionary,
+    _In_z_ PCBYTE Word,
+    _Out_writes_all_(sizeof(*Bitmap)) PCHARACTER_BITMAP Bitmap,
+    _Out_writes_all_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram,
+    _Outptr_result_nullonfailure_ PWORD_TABLE_ENTRY *WordTableEntryPointer
+    );
+typedef FIND_WORD_TABLE_ENTRY *PFIND_WORD_TABLE_ENTRY;
+extern FIND_WORD_TABLE_ENTRY FindWordTableEntry;
+
+typedef
+_Success_(return != 0)
+_Requires_exclusive_lock_held_(Dictionary->Lock)
+BOOLEAN
+(NTAPI ADD_WORD_ENTRY)(
+    _Inout_ PDICTIONARY Dictionary,
+    _In_z_ PCBYTE Word,
+    _Outptr_result_nullonfailure_ PCWORD_ENTRY *WordEntryPointer,
+    _Outptr_ LONGLONG *EntryCountPointer
+    );
+typedef ADD_WORD_ENTRY *PADD_WORD_ENTRY;
+extern ADD_WORD_ENTRY AddWordEntry;
 
 //
 // The PROCESS_ATTACH and PROCESS_ATTACH functions share the same signature.

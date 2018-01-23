@@ -36,7 +36,6 @@ Scratch2(
     DICTIONARY_CREATE_FLAGS CreateFlags;
     PDICTIONARY Dictionary;
     BOOLEAN IsProcessTerminating;
-    PWORD_ENTRY WordEntry;
     LONGLONG EntryCount;
 
     CreateFlags.AsULong = 0;
@@ -53,7 +52,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "elbow",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -62,7 +60,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "elbow",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -71,7 +68,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "elbow",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -80,7 +76,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "below",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -89,7 +84,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "below",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -98,7 +92,6 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "The quick brown fox jumped over the lazy dog.",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
@@ -107,14 +100,11 @@ Scratch2(
 
     Success = Api->AddWord(Dictionary,
                            "The quick brown fox jumped over the lazy dog.",
-                           &WordEntry,
                            &EntryCount);
 
     if (!Success) {
         __debugbreak();
     }
-
-
 
     Success = Api->DestroyDictionary(&Dictionary, &IsProcessTerminating);
 
