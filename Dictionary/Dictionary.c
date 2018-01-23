@@ -216,8 +216,10 @@ Return Value:
     PDICTIONARY Dictionary;
     PWORD_TABLE WordTable;
     PBITMAP_TABLE BitmapTable;
+    PLENGTH_TABLE LengthTable;
     PHISTOGRAM_TABLE HistogramTable;
     PWORD_TABLE_ENTRY WordTableEntry;
+    PLENGTH_TABLE_ENTRY LengthTableEntry;
     PBITMAP_TABLE_ENTRY BitmapTableEntry;
     PHISTOGRAM_TABLE_ENTRY HistogramTableEntry;
     PRTL_ENUMERATE_GENERIC_TABLE_AVL EnumerateTable;
@@ -253,7 +255,7 @@ Return Value:
     EnumerateTable = Rtl->RtlEnumerateGenericTableAvl;
 
     BitmapTable = &Dictionary->BitmapTable;
-    //BitmapAvl = &BitmapTable->Avl;
+    LengthTable = &Dictionary->LengthTable;
 
     //
     // Sanity check the dictionary structure size matches what we expect.
@@ -275,7 +277,6 @@ Return Value:
         //
 
         HistogramTable = &BitmapTableEntry->HistogramTable;
-        //HistogramAvl = HistogramTable->Avl;
 
         FOR_EACH_ENTRY_IN_TABLE(Histogram, PHISTOGRAM_TABLE_ENTRY) {
 
@@ -284,7 +285,6 @@ Return Value:
             //
 
             WordTable = &HistogramTableEntry->WordTable;
-            //WordAvl = &WordTable->Avl;
 
             FOR_EACH_ENTRY_IN_TABLE(Word, PWORD_TABLE_ENTRY) {
 
@@ -292,6 +292,15 @@ Return Value:
 
             }
         }
+    }
+
+    FOR_EACH_ENTRY_IN_TABLE(Length, PLENGTH_TABLE_ENTRY) {
+
+        //
+        // Remove the length table entry.
+        //
+
+        NOTHING;
     }
 
     //
