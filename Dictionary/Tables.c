@@ -209,7 +209,6 @@ WordTableCompareRoutine(
     PCLONG_STRING RightString;
     PTABLE_ENTRY_HEADER LeftHeader;
     PTABLE_ENTRY_HEADER RightHeader;
-    PDICTIONARY_CONTEXT Context;
 
     RTL_GENERIC_COMPARE_RESULTS Result;
 
@@ -219,8 +218,6 @@ WordTableCompareRoutine(
 
     LeftHeader = TABLE_ENTRY_TO_HEADER(LeftEntry);
     RightHeader = TABLE_ENTRY_TO_HEADER(RightEntry);
-
-    Context = DictionaryTlsGetContext();
 
     Result = GenericTableCompareRoutine(Table, LeftEntry, RightEntry);
 
