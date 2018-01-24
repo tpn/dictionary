@@ -69,6 +69,10 @@ Scratch2(
                            "elbow",
                            &EntryCount));
 
+    ASSERT(Api->RemoveWord(Dictionary,
+                           "elbow",
+                           &EntryCount));
+
     ASSERT(Api->AddWord(Dictionary,
                            "below",
                            &EntryCount));
