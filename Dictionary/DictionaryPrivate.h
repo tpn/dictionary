@@ -475,6 +475,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _DICTIONARY {
     ULONG MaximumWordLength;
 
     //
+    // Counters to track any length or histogram collisions.  Currently only
+    // used for information and debugging purposes.  Set by GetWordAnagrams().
+    //
+
+    ULONG LengthCollisions;
+    ULONG HistogramCollisions;
+
+    //
     // Pointer to an initialized RTL structure.
     //
 
