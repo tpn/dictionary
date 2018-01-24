@@ -306,7 +306,7 @@ Return Value:
         }
 
         //
-        // Increment our entry counter
+        // Increment our entry counter.
         //
 
         Count++;
