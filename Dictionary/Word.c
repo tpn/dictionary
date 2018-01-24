@@ -584,8 +584,106 @@ GetWordStats(
     PCBYTE Word,
     PWORD_STATS Stats
     )
+/*++
+
+Routine Description:
+
+    Retrieves current entry count and maximum entry count statistics about a
+    given word in the dictionary, provided it exists.
+
+Arguments:
+
+    Dictionary - Supplies a pointer to a DICTIONARY structure for which the
+        word stats are to be obtained.
+
+    Word - Supplies a NULL-terminated array of bytes to obtain stats for from
+        the dictionary.  The word must exist in the dictionary.  If it doesn't,
+        FALSE is returned.
+
+    Stats - Supplies a pointer to a DICTIONARY_STATS structure that will
+        receive the stats information for the given word.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+--*/
 {
-    return FALSE;
+    BOOL Success;
+    PWORD_STATS WordStats;
+    CHARACTER_BITMAP Bitmap;
+    DICTIONARY_CONTEXT Context;
+    CHARACTER_HISTOGRAM Histogram;
+    PWORD_TABLE_ENTRY WordTableEntry;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Dictionary)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(Word)) {
+        return FALSE;
+    }
+
+    if (!ARGUMENT_PRESENT(Stats)) {
+        return FALSE;
+    }
+
+    //
+    // Zero the context, bitmap and histogram structures.
+    //
+
+    ZeroStruct(Context);
+    ZeroStruct(Bitmap);
+    ZeroStruct(Histogram);
+
+    //
+    // Set the TLS context.
+    //
+
+    Context.Dictionary = Dictionary;
+    DictionaryTlsSetContext(&Context);
+
+    //
+    // Acquire the dictionary lock and attempt to find the word.
+    //
+
+    AcquireDictionaryLockShared(&Dictionary->Lock);
+
+    Success = FindWordTableEntry(Dictionary,
+                                 Word,
+                                 &Bitmap,
+                                 &Histogram,
+                                 &WordTableEntry);
+
+    if (!Success || WordTableEntry == NULL) {
+
+        Success = FALSE;
+
+    } else {
+
+        //
+        // Match found!  Write the stats.
+        //
+
+        WordStats = &WordTableEntry->WordEntry.Stats;
+        Stats->EntryCount = WordStats->EntryCount;
+        Stats->MaximumEntryCount = WordStats->MaximumEntryCount;
+
+        Success = TRUE;
+
+    }
+
+    //
+    // Release the lock and return our success indicator.
+    //
+
+    ReleaseDictionaryLockShared(&Dictionary->Lock);
+
+    return Success;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
