@@ -65,8 +65,6 @@ Return Value:
     ULONG Count = 0;
     ULONG Total;
     ULONG Length;
-    ULONG LengthCollisions = 0;
-    ULONG HistogramCollisions = 0;
     PULONG Counts;
     PBYTE Buffer;
     PBYTE StructBuffer;
@@ -302,7 +300,7 @@ Return Value:
         //
 
         if (String->Length != SourceString->Length) {
-            LengthCollisions++;
+            Dictionary->LengthCollisions++;
             continue;
         }
 
@@ -337,7 +335,7 @@ Return Value:
             // Histogram collision!  Skip this entry.
             //
 
-            HistogramCollisions++;
+            Dictionary->HistogramCollisions++;
             continue;
         }
 
