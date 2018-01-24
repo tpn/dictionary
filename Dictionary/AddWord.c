@@ -432,12 +432,34 @@ Return Value:
                 if (IsNewLongestWordAllTime) {
 
                     //
-                    // Register as the new longest word of all time.  We
-                    // point to ourselves here again just like we did for
-                    // the current longest word registration above.  There
-                    // is logic in the word removal routine that checks if
-                    // the word is the longest of all time and if so, makes a
-                    // new copy of it before removing the original.
+                    // If there's already a longest word of all time entry,
+                    // we may need to free it if it represents a word that has
+                    // since been removed from the dictionary completely.  We
+                    // can detect this from the hash value; if it's set to 0,
+                    // we use this as an indicator that the word needs to be
+                    // freed.
+                    //
+                    // N.B. We don't need to do this for the current longest
+                    //      word as that will always point to an active word.
+                    //
+
+                    if (LongestWordAllTime && LongestWordAllTime->Hash == 0) {
+
+                        WordAllocator->FreePointer(
+                            WordAllocator,
+                            (PPVOID)&Dictionary->Stats.LongestWordAllTime
+                        );
+
+                    }
+
+                    //
+                    // Register as the new longest word of all time.  We point
+                    // to ourselves here again just like we did for the current
+                    // longest word registration above.  There is logic in the
+                    // word removal routine that checks if the word is the
+                    // longest of all time and if so, makes a new copy of it
+                    // before removing the original and sets the hash to 0 such
+                    // that it can be detected by the code above.
                     //
 
                     Dictionary->Stats.LongestWordAllTime = &WordEntry->String;
@@ -451,15 +473,6 @@ Return Value:
 
         InsertTailList(&LengthTableEntry->LengthListHead,
                        &WordTableEntry->LengthListEntry);
-
-        //
-        // Point the word entry back to this newly-registered length list entry.
-        // This is required for word removal, as we'll need to remove the entry
-        // from the list head, and potentially update the dictionary's longest
-        // entry book keeping.
-        //
-
-        WordTableEntry->LengthTableEntry = LengthTableEntry;
 
     } else {
 

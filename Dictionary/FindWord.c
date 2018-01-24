@@ -160,6 +160,7 @@ Return Value:
 
     Context->BitmapTableEntry = BitmapTableEntry;
     HistogramTable = &BitmapTableEntry->HistogramTable;
+    Context->HistogramTable = HistogramTable;
 
     HistogramTableEntry = RtlLookupElementGenericTableAvl(&HistogramTable->Avl,
                                                           HistogramTableEntry);
