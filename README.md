@@ -184,6 +184,8 @@ The current state of the repo represents the first point everything is basically
 implemented and tested and working... remaining changes will just be bug fixes
 and cleanup.
 
+Edit: implemented GetWordStats(), so everything is basically finished.
+
 Hours: 9.0 (2.28, 6.72)
 
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->

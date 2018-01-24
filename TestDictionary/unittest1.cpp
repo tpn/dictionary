@@ -572,6 +572,7 @@ namespace TestDictionary
             BOOLEAN IsProcessTerminating;
             LONGLONG EntryCount;
             BOOLEAN Exists;
+            WORD_STATS Stats;
 
             CreateFlags.AsULong = 0;
             IsProcessTerminating = TRUE;
@@ -606,6 +607,10 @@ namespace TestDictionary
 
             Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
+
+            Assert::IsTrue(Api->GetWordStats(Dictionary, Elbow, &Stats));
+            Assert::IsTrue(Stats.EntryCount == 2);
+            Assert::IsTrue(Stats.MaximumEntryCount == 2);
 
             Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
             Assert::IsTrue(Exists);
@@ -759,6 +764,7 @@ namespace TestDictionary
             BOOLEAN Exists;
             BOOLEAN IsProcessTerminating;
             LONGLONG EntryCount;
+            WORD_STATS Stats;
 
             CreateFlags.AsULong = 0;
             IsProcessTerminating = TRUE;
@@ -793,6 +799,10 @@ namespace TestDictionary
             Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
             Assert::IsTrue(EntryCount == 2);
 
+            Assert::IsTrue(Api->GetWordStats(Dictionary, Elbow, &Stats));
+            Assert::IsTrue(Stats.EntryCount == 2);
+            Assert::IsTrue(Stats.MaximumEntryCount == 2);
+
             //
             // Verify removing below results in an error.
             //
@@ -806,6 +816,10 @@ namespace TestDictionary
 
             Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
             Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(Api->GetWordStats(Dictionary, Elbow, &Stats));
+            Assert::IsTrue(Stats.EntryCount == 1);
+            Assert::IsTrue(Stats.MaximumEntryCount == 2);
 
             //
             // Verify we can still find it.
