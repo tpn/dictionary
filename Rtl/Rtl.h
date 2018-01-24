@@ -2730,10 +2730,68 @@ typedef struct _RTL_SPLAY_LINKS {
 } RTL_SPLAY_LINKS, *PRTL_SPLAY_LINKS;
 C_ASSERT(sizeof(RTL_SPLAY_LINKS) == 24);
 
-typedef PRTL_SPLAY_LINKS (NTAPI PRTL_SPLAY)(
+typedef
+_Must_inspect_result_
+PRTL_SPLAY_LINKS
+(NTAPI PRTL_SPLAY)(
     _Inout_ PRTL_SPLAY_LINKS Links
     );
 
+typedef
+_Must_inspect_result_
+PRTL_SPLAY_LINKS
+(NTAPI RTL_SUBTREE_SUCCESSOR)(
+    _In_ PRTL_SPLAY_LINKS Links
+    );
+typedef RTL_SUBTREE_SUCCESSOR *PRTL_SUBTREE_SUCCESSOR;
+
+typedef
+_Must_inspect_result_
+PRTL_SPLAY_LINKS
+(NTAPI RTL_REAL_SUCCESSOR)(
+    _In_ PRTL_SPLAY_LINKS Links
+    );
+typedef RTL_REAL_SUCCESSOR *PRTL_REAL_SUCCESSOR;
+
+typedef
+_Must_inspect_result_
+PRTL_SPLAY_LINKS
+(NTAPI RTL_SUBTREE_PREDECESSOR)(
+    _In_ PRTL_SPLAY_LINKS Links
+    );
+typedef RTL_SUBTREE_PREDECESSOR *PRTL_SUBTREE_PREDECESSOR;
+
+typedef
+_Must_inspect_result_
+PRTL_SPLAY_LINKS
+(NTAPI RTL_REAL_PREDECESSOR)(
+    _In_ PRTL_SPLAY_LINKS Links
+    );
+typedef RTL_REAL_PREDECESSOR *PRTL_REAL_PREDECESSOR;
+
+#define RtlParent(Links) (            \
+    (PRTL_SPLAY_LINKS)(Links)->Parent \
+    )
+
+#define RtlLeftChild(Links) (            \
+    (PRTL_SPLAY_LINKS)(Links)->LeftChild \
+    )
+
+#define RtlRightChild(Links) (            \
+    (PRTL_SPLAY_LINKS)(Links)->RightChild \
+    )
+
+#define RtlIsRoot(Links) (                          \
+    (RtlParent(Links) == (PRTL_SPLAY_LINKS)(Links)) \
+    )
+
+#define RtlIsLeftChild(Links) (                                   \
+    (RtlLeftChild(RtlParent(Links)) == (PRTL_SPLAY_LINKS)(Links)) \
+    )
+
+#define RtlIsRightChild(Links) (                                   \
+    (RtlRightChild(RtlParent(Links)) == (PRTL_SPLAY_LINKS)(Links)) \
+    )
 
 //
 // Generic Tables
@@ -4421,6 +4479,10 @@ typedef INITIALIZE_RTL_FILE *PINITIALIZE_RTL_FILE;
 
 #define _RTLFUNCTIONS_HEAD                                                                             \
     PRTL_CHAR_TO_INTEGER RtlCharToInteger;                                                             \
+    PRTL_SUBTREE_SUCCESSOR RtlSubtreeSuccessor;                                                        \
+    PRTL_SUBTREE_PREDECESSOR RtlSubtreePredecessor;                                                    \
+    PRTL_REAL_SUCCESSOR RtlRealSuccessor;                                                              \
+    PRTL_REAL_PREDECESSOR RtlRealPredecessor;                                                          \
     PRTL_INITIALIZE_GENERIC_TABLE RtlInitializeGenericTable;                                           \
     PRTL_INSERT_ELEMENT_GENERIC_TABLE RtlInsertElementGenericTable;                                    \
     PRTL_INSERT_ELEMENT_GENERIC_TABLE_FULL RtlInsertElementGenericTableFull;                           \
@@ -4643,45 +4705,6 @@ typedef BOOLEAN (*PRTL_CHECK_BIT)(
     _In_ PRTL_BITMAP BitMapHeader,
     _In_ ULONG BitPosition
     );
-
-typedef VOID (*PRTL_INITIALIZE_SPLAY_LINKS)(
-    _Out_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef PRTL_SPLAY_LINKS (*PRTL_PARENT)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef PRTL_SPLAY_LINKS (*PRTL_LEFT_CHILD)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef PRTL_SPLAY_LINKS (*PRTL_RIGHT_CHILD)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef BOOLEAN (*PRTL_IS_ROOT)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef BOOLEAN (*PRTL_IS_LEFT_CHILD)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef BOOLEAN (*PRTL_IS_RIGHT_CHILD)(
-    _In_ PRTL_SPLAY_LINKS Links
-    );
-
-typedef VOID (*PRTL_INSERT_AS_LEFT_CHILD)(
-    _Inout_ PRTL_SPLAY_LINKS ParentLinks,
-    _Inout_ PRTL_SPLAY_LINKS ChildLinks
-    );
-
-typedef VOID (*PRTL_INSERT_AS_RIGHT_CHILD)(
-    _Inout_ PRTL_SPLAY_LINKS ParentLinks,
-    _Inout_ PRTL_SPLAY_LINKS ChildLinks
-    );
-
 
 
 //
@@ -5474,15 +5497,6 @@ typedef TEST_LOAD_SYMBOLS_FROM_MULTIPLE_MODULES
     PPREFAULT_PAGES PrefaultPages;                                                  \
     PREGISTER_DLL_NOTIFICATION RegisterDllNotification;                             \
     PRTL_CHECK_BIT RtlCheckBit;                                                     \
-    PRTL_INITIALIZE_SPLAY_LINKS RtlInitializeSplayLinks;                            \
-    PRTL_INSERT_AS_LEFT_CHILD RtlInsertAsLeftChild;                                 \
-    PRTL_INSERT_AS_RIGHT_CHILD RtlInsertAsRightChild;                               \
-    PRTL_IS_LEFT_CHILD RtlIsLeftChild;                                              \
-    PRTL_IS_RIGHT_CHILD RtlIsRightChild;                                            \
-    PRTL_IS_ROOT RtlIsRoot;                                                         \
-    PRTL_LEFT_CHILD RtlLeftChild;                                                   \
-    PRTL_PARENT RtlParent;                                                          \
-    PRTL_RIGHT_CHILD RtlRightChild;                                                 \
     PSET_PRIVILEGE SetPrivilege;                                                    \
     PSTRING_TO_EXISTING_RTL_PATH StringToExistingRtlPath;                           \
     PSTRING_TO_RTL_PATH StringToRtlPath;                                            \
@@ -8892,6 +8906,7 @@ Return Value:
         WRITE_REG_QWORD(Key, Name, Value);          \
     }                                               \
 } while (0)
+
 
 //
 // Verbatim copy of the doubly-linked list inline methods.

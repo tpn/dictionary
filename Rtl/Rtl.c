@@ -2284,6 +2284,7 @@ RtlCheckBit(
 // Functions for Splay Macros
 //
 
+/*
 RTL_API
 VOID
 RtlInitializeSplayLinks(
@@ -2358,6 +2359,7 @@ RtlInsertAsRightChild (
     ParentLinks->RightChild = ChildLinks;
     ChildLinks->Parent = ParentLinks;
 }
+*/
 
 RTL_API
 LONG
