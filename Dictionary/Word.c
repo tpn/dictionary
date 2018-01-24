@@ -15,10 +15,6 @@ Abstract:
 
 #include "stdafx.h"
 
-//
-// Word initialization.
-//
-
 _Use_decl_annotations_
 BOOLEAN
 InitializeWord(
@@ -31,6 +27,64 @@ InitializeWord(
     PULONG BitmapHashPointer,
     PULONG HistogramHashPointer
     )
+/*++
+
+Routine Description:
+
+    For a given NULL-terminated array of bytes representing a dictionary word,
+    verify that the array is within the given minimum and maximum lengths, then
+    fill out a corresponding string, bitmap and histogram structure, and
+    calculate 32-bit hashes for each.  (The string hash is returned in the
+    String->Hash field, the bitmap and histogram hashes are provided by the
+    output parameters of the same names.)
+
+    This routine is used to construct the necessary metadata for a string such
+    that it can be inserted, found or removed from the dictionary.  It is used
+    either directly or indirectly by all major dictionary API functions.
+
+Arguments:
+
+    Bytes - Supplies a NULL-terminated array of bytes representing the word to
+        initialize.
+
+    MinimumLength - Supplies the minumum length permissible for the incoming
+        array of bytes.  Must be greater than zero and less than or equal to
+        the MaximumLength parameter.
+
+    MaximumLength - Supplies the maximum length permissible for the incoming
+        array of bytes.  Must be greater than zero and greater than or equal
+        to the MinimumLength parameter.
+
+    String - Supplies a pointer to a LONG_STRING structure that will be filled
+        out with the relevant details for the given input array.  That is, the
+        Length, Hash and Buffer parameters will be set accordingly.  The Buffer
+        field will be initialized to the Bytes parameter.  The caller must copy
+        this if the string is to be persisted internally (this is done by the
+        AddWord routine, for example).
+
+    Bitmap - Supplies a pointer to a CHARACTER_BITMAP structure that will
+        receive the corresponding bitmap representation of the incoming word.
+        (This parameter is passed directly to InitializeWord.)
+
+    Histogram - Supplies a pointer to a CHARACTER_HISTOGRAM structure that
+        will receive the corresponding histogram representation of the incoming
+        word.  (This parameter is passed directly to InitializeWord.)
+
+    BitmapHashPointer - Supplies the address of a variable that will receive
+        the 32-bit hash calculated for the bitmap representation of the word.
+
+    HistogramHashPointer - Supplies the address of a variable that will receive
+        the 32-bit hash calculated for the histogram representation of the word.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+    N.B. Both Bitmap and Histogram must be aligned on 32-byte boundaries due
+         to AVX2 alignment requirements.  As both structures are declared with
+         a DECLSPEC_ALIGN(32), this should be done automatically.
+
+--*/
 {
     BYTE Byte;
     BYTE TrailingBytes;
@@ -192,10 +246,10 @@ InitializeWord(
         // There are between 1 and 3 bytes remaining at the end of the string.
         // We can't use _mm_crc32_u32() here directly on the last ULONG as we
         // will include the bytes past the end of the string, which will be
-        // random and will affect our hash value.  So, load we load the last
-        // ULONG then zero out the high bits that we want to ignore using the
-        // _bzhi_u32() intrinsic.  This ensures only the bytes that are part
-        // of the input string participate in the hash value calculation.
+        // random and will affect our hash value.  So, we load the last ULONG
+        // then zero out the high bits that we want to ignore via _bzhi_u32().
+        // This ensures that only the bytes that are part of the input string
+        // participate in the hash value calculation.
         //
 
         ULONG Last = 0;
@@ -256,7 +310,9 @@ CompareWords(
 
 Routine Description:
 
-    Compares two words.
+    Compares two words using AVX2 intrinsics.  The two words must be of equal
+    length.  This routine is called to verify string equality by the AVL word
+    table routines once the string hashes have been matched.
 
 Arguments:
 
@@ -391,10 +447,6 @@ StartYmm:
 
 StartXmm:
 
-    //
-    // Update the search string's alignment.
-    //
-
     if (Remaining >= 16) {
 
         //
@@ -405,6 +457,7 @@ StartXmm:
         //
 
         LeftStringAlignment = GetAddressAlignment(LeftBuffer);
+        RightStringAlignment = GetAddressAlignment(RightBuffer);
 
         if (LeftStringAlignment < 16) {
             LeftXmm = _mm_loadu_si128((XMMWORD *)LeftBuffer);
@@ -412,7 +465,11 @@ StartXmm:
             LeftXmm = _mm_stream_load_si128((XMMWORD *)LeftBuffer);
         }
 
-        RightXmm = _mm_stream_load_si128((XMMWORD *)RightBuffer);
+        if (RightStringAlignment < 16) {
+            RightXmm = _mm_loadu_si128((XMMWORD *)RightBuffer);
+        } else {
+            RightXmm = _mm_stream_load_si128((XMMWORD *)RightBuffer);
+        }
 
         //
         // Compare the two vectors.
@@ -544,6 +601,13 @@ StartXmm:
 
     EqualMask = _mm_movemask_epi8(EqualXmm);
     EqualMask = _bzhi_u32(EqualMask, Remaining);
+
+    //
+    // We can't compare the EqualMask to -1 to determine equality like we did
+    // above due to the masking.  Instead, we need to do a population count on
+    // the mask -- if the comparison was equal, the number of bits set in the
+    // mask will equal the number of remaining bytes to compare.
+    //
 
     Count = __popcnt(EqualMask);
 

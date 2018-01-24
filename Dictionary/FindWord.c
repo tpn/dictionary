@@ -9,7 +9,12 @@ Module Name:
 Abstract:
 
     This module implements the find word functionality for the dictionary
-    component.
+    component.  Two routines a provided: FindWord, which is the publicly
+    exposed API function, and FindWordTableEntry, which is private to the
+    dictionary module.  The latter is also used by the GetWordAnagrams and
+    RemoveWord routines, and allows the caller to capture the bitmap and
+    histogram representations of a word, as well as the corresponding word
+    table entry.
 
 --*/
 
@@ -28,15 +33,37 @@ FindWordTableEntry(
 
 Routine Description:
 
-    TBD.
+    Finds the word table entry for a given word in a dictionary.  This is
+    a private routine that is used by both FindWord and RemoveWord, hence
+    its use of the private type WORD_TABLE_ENTRY as an output parameter.
 
 Arguments:
 
-    TBD.
+    Dictionary - Supplies a pointer to a DICTIONARY structure for which the
+        given word is to be found.
+
+    Word - Supplies a NULL-terminated array of bytes representing the word to
+        find in the dictionary.
+
+    Bitmap - Supplies a pointer to a CHARACTER_BITMAP structure that will
+        receive the corresponding bitmap representation of the incoming word.
+        (This parameter is passed directly to InitializeWord.)
+
+    Histogram - Supplies a pointer to a CHARACTER_HISTOGRAM structure that
+        will receive the corresponding histogram representation of the incoming
+        word.  (This parameter is passed directly to InitializeWord.)
+
+    WordEntryPointer - Supplies an address to a variable that receives the
+        address of the WORD_ENTRY structure representing the word found if
+        no error occurred.  Will be set to NULL on error.
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    TRUE on success, FALSE on failure.  If no word is found, TRUE will be
+    returned and the caller's WordTableEntryPointer output parameter will
+    be set to NULL.
+
+    If TRUE is returned, both the Bitmap and Histogram will be filled out.
 
 --*/
 {
@@ -225,15 +252,24 @@ FindWord(
 
 Routine Description:
 
-    TBD.
+    This is the public routine for determining whether or not a word exists
+    in a dictionary.
 
 Arguments:
 
-    TBD.
+    Dictionary - Supplies a pointer to a DICTIONARY structure for which the
+        given word is to be found.
+
+    Word - Supplies a NULL-terminated array of bytes representing the word to
+        find in the dictionary.
+
+    Exists - Supplies the address of a variable that will receive a boolean
+        flag indicating whether or not the word was found in the dictionary.
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    TRUE on success, FALSE on failure.  If no word is found, TRUE will be
+    returned and FALSE will be written to the Exists output parameter.
 
 --*/
 {
@@ -303,6 +339,10 @@ Return Value:
         *Exists = TRUE;
 
     }
+
+    //
+    // Release the lock and indicate success.
+    //
 
     ReleaseDictionaryLockShared(&Dictionary->Lock);
 

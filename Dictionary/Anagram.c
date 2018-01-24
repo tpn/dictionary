@@ -193,7 +193,8 @@ Return Value:
     // structures, which assumes there are no collisions.
     //
     // If there are collisions, worst case scenario we allocate more memory
-    // than necessary.
+    // than necessary.  However, as the caller provides the allocator, we can
+    // pass that burden off to them; it doesn't really affect us.
     //
 
     //
@@ -269,8 +270,8 @@ Return Value:
 
     //
     // Enumerate all words in the table and generate a histogram, then compare
-    // it to the histogram of our incoming string.  If they match,
-    //
+    // it to the histogram of our incoming string.  If they match, we've found
+    // an anagram, so add it to the list.
     //
 
     FOR_EACH_ENTRY_IN_TABLE(Word, PWORD_TABLE_ENTRY) {
