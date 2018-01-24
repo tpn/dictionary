@@ -157,6 +157,33 @@ Last major piece remaining is implementing RemoveWord().  This will be a little
 fiddly due to the requirement to track current and all-time longest lengths of
 words at the dictionary level.
 
-Hours: 10.02 (3.4, 3.57, 3.05).
+Hours: 11.24 (3.4, 3.57, 3.05, 1.22).
+
+## Day 6
+
+Implement
+[RemoveWord](https://github.com/tpn/dictionary/blob/v0.6/Dictionary/RemoveWord.c#L20)
+and some initial supporting
+[tests](https://github.com/tpn/dictionary/blob/v0.6/TestDictionary/unittest1.cpp#L678).
+
+It was about as fiddly as I anticipated due to the longest length tracking
+requirement but otherwise no issues.  The length promotion approach worked
+as anticipated.
+
+Added bonus: freed up a pointer per word table entry; we don't need to track the
+length table entry as we can get the next longest length from some linked-list +
+CONTAINING_RECORD() manipulation.
+
+Only function that remains unimplemented is GetWordStats() but that won't take
+long given that everything else is in place.
+
+More tests are warranted for all the various behavioral permutations, I'll add
+some more tomorrow.
+
+The current state of the repo represents the first point everything is basically
+implemented and tested and working... remaining changes will just be bug fixes
+and cleanup.
+
+Hours: 9.0 (2.28, 6.72)
 
 <!-- vim:set ts=8 sw=4 sts=4 tw=80 expandtab                              :  -->
