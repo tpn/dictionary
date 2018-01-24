@@ -206,7 +206,6 @@ typedef WORD_TABLE *PWORD_TABLE;
 
 typedef struct _WORD_TABLE_ENTRY {
     WORD_ENTRY WordEntry;
-    PLENGTH_TABLE_ENTRY LengthTableEntry;
     LIST_ENTRY LengthListEntry;
 } WORD_TABLE_ENTRY;
 typedef WORD_TABLE_ENTRY *PWORD_TABLE_ENTRY;
@@ -605,7 +604,7 @@ extern ULONG DictionaryTlsIndex;
 
 typedef
 _Success_(return != 0)
-_Requires_shared_lock_held_(Dictionary->Lock)
+_Requires_lock_held_(Dictionary->Lock)
 BOOLEAN
 (NTAPI FIND_WORD_TABLE_ENTRY)(
     _In_ PDICTIONARY Dictionary,

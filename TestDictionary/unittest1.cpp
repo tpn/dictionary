@@ -675,6 +675,274 @@ namespace TestDictionary
             );
         }
 
+        TEST_METHOD(RemoveWord1)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN Exists;
+            BOOLEAN IsProcessTerminating;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            //
+            // Verify parameter validation.
+            //
+
+            Assert::IsFalse(Api->RemoveWord(NULL, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, Elbow, NULL));
+
+            //
+            // Verify removing a word that doesn't exist.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Add elbow twice.
+            //
+
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 2);
+
+            //
+            // Verify removing below results in an error.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Below, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Remove elbow and verify one still exists.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 1);
+
+            //
+            // Verify we can still find it.
+            //
+
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
+            Assert::IsTrue(Exists);
+
+            //
+            // Add it again and verify the entry count is 2.
+            //
+
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 2);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(RemoveWord2)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN Exists;
+            BOOLEAN IsProcessTerminating;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            //
+            // Verify parameter validation.
+            //
+
+            Assert::IsFalse(Api->RemoveWord(NULL, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, Elbow, NULL));
+
+            //
+            // Verify removing a word that doesn't exist.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Add elbow twice.
+            //
+
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 2);
+
+            //
+            // Verify removing below results in an error.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Below, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Remove elbow and verify one still exists.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 1);
+
+            //
+            // Verify we can still find it.
+            //
+
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
+            Assert::IsTrue(Exists);
+
+            //
+            // Remove elbow.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 0);
+
+            //
+            // Try remove it again and verify we get -1.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Try find it again and verify it's not there.
+            //
+
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
+            Assert::IsFalse(Exists);
+
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(RemoveWord3)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN Exists;
+            BOOLEAN IsProcessTerminating;
+            LONGLONG EntryCount;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            //
+            // Verify parameter validation.
+            //
+
+            Assert::IsFalse(Api->RemoveWord(NULL, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, NULL, NULL));
+            Assert::IsFalse(Api->RemoveWord(Dictionary, Elbow, NULL));
+
+            //
+            // Verify removing a word that doesn't exist.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Add elbow twice.
+            //
+
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(Api->AddWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 2);
+
+            //
+            // Verify removing below results in an error.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Below, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Remove elbow and verify one still exists.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 1);
+
+            //
+            // Verify we can still find it.
+            //
+
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
+            Assert::IsTrue(Exists);
+
+            //
+            // Add a new longest word.
+            //
+
+            Assert::IsTrue(Api->AddWord(Dictionary, QuickFox, &EntryCount));
+            Assert::IsTrue(EntryCount == 1);
+
+            //
+            // Remove elbow.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == 0);
+
+            //
+            // Try remove it again and verify we get -1.
+            //
+
+            Assert::IsTrue(Api->RemoveWord(Dictionary, Elbow, &EntryCount));
+            Assert::IsTrue(EntryCount == -1);
+
+            //
+            // Try find it again and verify it's not there.
+            //
+
+            Assert::IsTrue(Api->FindWord(Dictionary, Elbow, &Exists));
+            Assert::IsFalse(Exists);
+
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
 
     };
 }
