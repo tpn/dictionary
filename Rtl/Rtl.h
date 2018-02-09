@@ -6007,9 +6007,9 @@ _Success_(return != 0)
 BOOL
 (CALLBACK PROBE_FOR_READ)(
     _In_ PRTL Rtl,
-    _In_reads_(ROUND_TO_PAGES(NumberOfBytes)) PVOID Address,
+    _In_reads_bytes_((NumberOfBytes + 4096 - 1) & ~(4096 -1)) PVOID Address,
     _In_ SIZE_T NumberOfBytes,
-    _Outptr_opt_result_maybenull_ PULONG NumberOfValidPages
+    _Out_ PULONG NumberOfValidPages
     );
 typedef PROBE_FOR_READ *PPROBE_FOR_READ;
 
