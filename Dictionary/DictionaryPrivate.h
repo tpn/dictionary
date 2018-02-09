@@ -92,7 +92,7 @@ BOOLEAN
     _Out_ PULONG HistogramHashPointer
     );
 typedef INITIALIZE_WORD *PINITIALIZE_WORD;
-INITIALIZE_WORD InitializeWord;
+extern INITIALIZE_WORD InitializeWord;
 
 typedef
 RTL_GENERIC_COMPARE_RESULTS
@@ -101,7 +101,7 @@ RTL_GENERIC_COMPARE_RESULTS
     _In_ _Const_ PCLONG_STRING RightString
     );
 typedef COMPARE_WORDS *PCOMPARE_WORDS;
-COMPARE_WORDS CompareWords;
+extern COMPARE_WORDS CompareWords;
 
 typedef
 RTL_GENERIC_COMPARE_RESULTS
@@ -110,8 +110,7 @@ RTL_GENERIC_COMPARE_RESULTS
     _In_ _Const_ PCCHARACTER_HISTOGRAM Right
     );
 typedef COMPARE_CHARACTER_HISTOGRAMS *PCOMPARE_CHARACTER_HISTOGRAMS;
-
-COMPARE_CHARACTER_HISTOGRAMS CompareHistogramsAlignedAvx2;
+extern COMPARE_CHARACTER_HISTOGRAMS CompareHistogramsAlignedAvx2;
 
 typedef
 RTL_GENERIC_COMPARE_RESULTS
@@ -632,7 +631,7 @@ BOOLEAN
     _Inout_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
     _Outptr_result_nullonfailure_ PCWORD_ENTRY *WordEntryPointer,
-    _Outptr_ LONGLONG *EntryCountPointer
+    _Out_ LONGLONG *EntryCountPointer
     );
 typedef ADD_WORD_ENTRY *PADD_WORD_ENTRY;
 extern ADD_WORD_ENTRY AddWordEntry;
