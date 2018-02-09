@@ -272,7 +272,7 @@ BOOLEAN
 (NTAPI ADD_WORD)(
     _Inout_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
-    _Outptr_ LONGLONG *EntryCountPointer
+    _Out_ LONGLONG *EntryCountPointer
     );
 typedef ADD_WORD *PADD_WORD;
 
@@ -282,7 +282,7 @@ BOOLEAN
 (NTAPI FIND_WORD)(
     _In_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
-    _Outptr_ PBOOLEAN Exists
+    _Out_ PBOOLEAN Exists
     );
 typedef FIND_WORD *PFIND_WORD;
 
@@ -292,7 +292,7 @@ BOOLEAN
 (NTAPI REMOVE_WORD)(
     _Inout_ PDICTIONARY Dictionary,
     _In_z_ PCBYTE Word,
-    _Outptr_ LONGLONG *EntryCountPointer
+    _Out_ LONGLONG *EntryCountPointer
     );
 typedef REMOVE_WORD *PREMOVE_WORD;
 
@@ -303,7 +303,7 @@ BOOLEAN
     _In_ PDICTIONARY Dictionary,
     _In_ PALLOCATOR Allocator,
     _In_z_ PCBYTE Word,
-    _Outptr_result_maybenull_ PLINKED_WORD_LIST *LinkedWordListPointer
+    _Out_ PLINKED_WORD_LIST *LinkedWordListPointer
     );
 typedef GET_WORD_ANAGRAMS *PGET_WORD_ANAGRAMS;
 
@@ -323,7 +323,7 @@ BOOLEAN
 (NTAPI GET_DICTIONARY_STATS)(
     _In_ PDICTIONARY Dictionary,
     _In_ PALLOCATOR Allocator,
-    _Outptr_result_nullonfailure_ PDICTIONARY_STATS *DictionaryStatsPointer
+    _Out_ PDICTIONARY_STATS *DictionaryStatsPointer
     );
 typedef GET_DICTIONARY_STATS *PGET_DICTIONARY_STATS;
 
