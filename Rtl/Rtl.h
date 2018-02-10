@@ -4768,6 +4768,16 @@ VOID
 typedef COPY_PAGES_EX *PCOPY_PAGES_EX;
 #endif
 
+typedef
+ULONGLONG
+(NTAPI FIND_AND_REPLACE_BYTE)(
+    _In_ ULONGLONG SizeOfBufferInBytes,
+    _Inout_bytecap_(SizeOfBufferInBytes) PBYTE Buffer,
+    _In_ BYTE Find,
+    _In_ BYTE Replace
+    );
+typedef FIND_AND_REPLACE_BYTE *PFIND_AND_REPLACE_BYTE;
+
 //
 // Our functions
 //
@@ -6133,6 +6143,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _RTL {
     PCOPY_PAGES CopyPages;
     PFILL_PAGES FillPages;
     PPROBE_FOR_READ ProbeForRead;
+    PFIND_AND_REPLACE_BYTE FindAndReplaceByte;
 
     PRTL_CREATE_NAMED_EVENT CreateNamedEvent;
 

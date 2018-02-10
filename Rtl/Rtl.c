@@ -154,6 +154,111 @@ PrefaultPages(
     return TRUE;
 }
 
+FIND_AND_REPLACE_BYTE FindAndReplaceByte;
+
+_Use_decl_annotations_
+ULONGLONG
+RtlFindAndReplaceByte(
+    ULONGLONG SizeOfBufferInBytes,
+    PBYTE Buffer,
+    BYTE Find,
+    BYTE Replace
+    )
+{
+    BYTE Byte;
+    ULONG Mask;
+    ULONG Count;
+    ULONGLONG Total;
+    ULONGLONG Index;
+    ULONGLONG TrailingBytes;
+    ULONGLONG NumberOfYmmWords;
+    YMMWORD Chunk;
+    YMMWORD Found;
+    YMMWORD Replaced;
+    YMMWORD FindYmm;
+    YMMWORD ReplaceYmm;
+    PYMMWORD BufferYmm;
+    PBYTE Dest;
+    PBYTE TrailingBuffer;
+
+    TrailingBytes = SizeOfBufferInBytes % sizeof(YMMWORD);
+    NumberOfYmmWords = SizeOfBufferInBytes >> 5;
+
+    FindYmm = _mm256_broadcastb_epi8(_mm_set1_epi8(Find));
+    ReplaceYmm = _mm256_broadcastb_epi8(_mm_set1_epi8(Replace));
+
+    BufferYmm = (PYMMWORD)Buffer;
+
+    Total = 0;
+
+    if (NumberOfYmmWords) {
+
+        for (Index = 0; Index < NumberOfYmmWords; Index++) {
+
+            //
+            // Load a 32 byte chunk of the input buffer.
+            //
+
+            Chunk = _mm256_load_si256(BufferYmm + Index);
+
+            //
+            // Intersect the buffer with the character to find.
+            //
+
+            Found = _mm256_cmpeq_epi8(Chunk, FindYmm);
+
+            //
+            // Create a mask and then do a popcount to determine how many
+            // bytes were matched.
+            //
+
+            Mask = _mm256_movemask_epi8(Found);
+            Count = __popcnt(Mask);
+
+            if (Count != 0) {
+
+                //
+                // Blend the chunk with replacement characters via the mask we
+                // just generated.
+                //
+
+                Replaced = _mm256_blendv_epi8(Chunk, ReplaceYmm, Found);
+
+                //
+                // Store this copy back in memory.
+                //
+
+                _mm256_store_si256(BufferYmm + Index, Replaced);
+
+                //
+                // Update the total count.
+                //
+
+                Total += Count;
+            }
+        }
+
+    }
+
+    if (TrailingBytes) {
+
+        TrailingBuffer = Buffer + (SizeOfBufferInBytes - TrailingBytes);
+
+        for (Index = 0; Index < TrailingBytes; Index++) {
+            Dest = TrailingBuffer + Index;
+            Byte = *Dest;
+            if (Byte == Find) {
+                *Dest = Replace;
+                ++Total;
+            }
+        }
+
+    }
+
+    return Total;
+}
+
+
 BOOL
 LoadShlwapiFunctions(
     _In_    HMODULE             ShlwapiModule,
@@ -3814,6 +3919,7 @@ InitializeRtl(
 
     Rtl->InitializeCom = InitializeCom;
     Rtl->LoadDbgEng = LoadDbgEng;
+    Rtl->FindAndReplaceByte = RtlFindAndReplaceByte;
     Rtl->CopyPages = CopyPagesNonTemporalAvx2_v4;
     Rtl->FillPages = FillPagesNonTemporalAvx2_v1;
     Rtl->ProbeForRead = ProbeForRead;
