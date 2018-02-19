@@ -186,7 +186,9 @@ Return Value:
     //
 
     Context.Dictionary = Dictionary;
-    DictionaryTlsSetContext(&Context);
+    if (!DictionaryTlsSetContext(&Context)) {
+        goto Error;
+    }
 
     //
     // Prepare a bitmap table entry for potential insertion into the bitmap

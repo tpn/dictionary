@@ -21,94 +21,50 @@ Abstract:
 
 #include "stdafx.h"
 
+_Use_decl_annotations_
 RTL_GENERIC_COMPARE_RESULTS
 NTAPI
 CompareHistogramsAlignedAvx2(
     PCCHARACTER_HISTOGRAM Left,
     PCCHARACTER_HISTOGRAM Right
     )
-/*++
-
-Routine Description:
-
-    Compares two histograms using AVX2 intrinsics.  Underlying buffers must be
-    aligned.
-
-Arguments:
-
-    Left - Supplies the left histogram to compare.
-
-    Right - Supplies the right histogram to compare.
-
-Return Value:
-
-    GenericLessThan, GenericEqual or GenericGreaterThan depending on the result
-    of the comparison.
-
-    N.B. If the AVX2 instruction set is not support on the current CPU, this
-         method will raise an EXCEPTION_ILLEGAL_INSTRUCTION.
-
-    N.B. If either of the Left or Right parameters are not aligned on a 32-byte
-         boundary, an EXCEPTION_ACCESS_VIOLATION will be raised.
-
---*/
 {
-    BYTE Index;
-    BYTE Length;
-    LONG EqualMask;
-    LONG GreaterThanMask;
+    return CompareHistogramsAlignedAvx2Inline(Left, Right);
+}
 
-    YMMWORD LeftYmm;
-    YMMWORD RightYmm;
+_Use_decl_annotations_
+BOOLEAN
+NTAPI
+CreateHistogram(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM Histogram
+    )
+{
+    return CreateHistogramInline(String, Histogram);
+}
 
-    YMMWORD EqualYmm;
-    YMMWORD GreaterThanYmm;
+_Use_decl_annotations_
+BOOLEAN
+NTAPI
+CreateHistogramAvx2C(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM Histogram,
+    PCHARACTER_HISTOGRAM TempHistogram
+    )
+{
+    return CreateHistogramAvx2Inline(String, Histogram, TempHistogram);
+}
 
-    //
-    // Loop through each histogram 32-bytes at a time and compare values using
-    // AVX2 intrinsics.
-    //
-
-    Length = ARRAYSIZE(Left->Ymm);
-
-    for (Index = 0; Index < Length; Index++) {
-
-        LeftYmm = _mm256_load_si256(&Left->Ymm[Index]);
-        RightYmm = _mm256_load_si256(&Right->Ymm[Index]);
-
-        EqualYmm = _mm256_cmpeq_epi32(LeftYmm, RightYmm);
-        EqualMask = _mm256_movemask_epi8(EqualYmm);
-
-        if (EqualMask == -1) {
-
-            //
-            // These two 32-byte chunks are equal, continue the comparison.
-            //
-
-            continue;
-        }
-
-        //
-        // We've found a non-equal chunk.  Determine if it's greater than or
-        // less than and terminate the loop.
-        //
-
-        GreaterThanYmm = _mm256_cmpgt_epi32(LeftYmm, RightYmm);
-        GreaterThanMask = _mm256_movemask_epi8(GreaterThanYmm);
-
-        if (GreaterThanMask == -1) {
-            return GenericGreaterThan;
-        } else {
-            return GenericLessThan;
-        }
-    }
-
-    //
-    // If we get here, the loop exhausted all values and everything was found
-    // to be equal, so return GenericEqual.
-    //
-
-    return GenericEqual;
+_Use_decl_annotations_
+BOOLEAN
+NTAPI
+CreateHistogramAvx2AlignedC(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM Histogram,
+    PCHARACTER_HISTOGRAM TempHistogram
+    )
+{
+    return CreateHistogramAvx2Inline(String, Histogram, TempHistogram);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

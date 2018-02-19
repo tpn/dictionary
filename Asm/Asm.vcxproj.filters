@@ -45,16 +45,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="CopyPages.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
     <MASM Include="FillPages.asm">
       <Filter>Source Files</Filter>
     </MASM>
     <MASM Include="Misc.asm">
       <Filter>Source Files</Filter>
     </MASM>
-    <MASM Include="InjectionThunk.asm">
+    <MASM Include="Histogram.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

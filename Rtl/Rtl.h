@@ -6303,12 +6303,12 @@ PopulationCount32(
 }
 
 FORCEINLINE
-USHORT
+ULONGLONG
 GetAddressAlignment(_In_ PVOID Address)
 {
     ULONGLONG Integer = (ULONGLONG)Address;
     ULONGLONG NumTrailingZeros = TrailingZeros64(Integer);
-    return (1 << NumTrailingZeros);
+    return (1ULL << NumTrailingZeros);
 }
 
 FORCEINLINE

@@ -69,15 +69,6 @@ C_ASSERT(sizeof(CHARACTER_BITMAP) == 32);
 typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
 typedef const CHARACTER_BITMAP *PCCHARACTER_BITMAP;
 
-typedef union DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM {
-    YMMWORD Ymm[32];
-    XMMWORD Xmm[64];
-    ULONG Counts[NUMBER_OF_CHARACTER_BITS];
-} CHARACTER_HISTOGRAM;
-C_ASSERT(sizeof(CHARACTER_HISTOGRAM) == 1024);
-typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
-typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
-
 typedef
 _Success_(return != 0)
 BOOLEAN
@@ -86,7 +77,7 @@ BOOLEAN
     _In_ ULONG MinimumLength,
     _In_ ULONG MaximumLength,
     _Inout_ PLONG_STRING String,
-    _Inout_ PCHARACTER_BITMAP Bitmap,
+    _Out_ PCHARACTER_BITMAP Bitmap,
     _Inout_ PCHARACTER_HISTOGRAM Histogram,
     _Out_ PULONG BitmapHashPointer,
     _Out_ PULONG HistogramHashPointer

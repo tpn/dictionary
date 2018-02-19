@@ -27,6 +27,9 @@
     <ClInclude Include="DictionaryPrivate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HistogramInline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.c">
@@ -65,6 +68,11 @@
     <ClCompile Include="Anagram.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="HistogramAsm.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
   <!--
   <ItemGroup>

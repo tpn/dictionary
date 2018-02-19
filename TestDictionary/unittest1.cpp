@@ -23,14 +23,16 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 //
 
 #define MAKE_STRING(Name, Value)                                               \
-    static const LONG_STRING Name##String = CONSTANT_LONG_STRING((PBYTE)Value);\
+    static const LONG_STRING Name##String = CONSTANT_LONG_STRING(Value);       \
     static PCBYTE Name = Name##String.Buffer;                                  \
     static ULONG Name##Length = Name##String.Length
 
 MAKE_STRING(Below, "below");
 MAKE_STRING(Elbow, "elbow");
-MAKE_STRING(QuickFox, "The quick brown fox jumps over the lazy dog.");
-MAKE_STRING(LazyDog,  "The lazy dog jumps over the quick brown fox.");
+MAKE_STRING(QuickFox,  "The quick brown fox jumps over the lazy dog.");
+MAKE_STRING(LazyDog,   "The lazy dog jumps over the quick brown fox.");
+MAKE_STRING(QuickLazy, "The quick brown fox jumps over the lazy dog and then "
+                       "the lazy dog jumps over the quick brown fox.");
 
 RTL GlobalRtl;
 ALLOCATOR GlobalAllocator;
@@ -46,6 +48,62 @@ PDICTIONARY_FUNCTIONS Api;
 
 HMODULE GlobalRtlModule = 0;
 HMODULE GlobalDictionaryModule = 0;
+
+BOOLEAN
+MakeRandomString(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    ULONG BufferSize,
+    PBYTE *BufferPointer
+    )
+{
+    BOOLEAN Success;
+    PBYTE Buffer;
+    ULONGLONG BytesReplaced;
+
+    *BufferPointer = NULL;
+
+    Buffer = (PBYTE)Allocator->Malloc(Allocator, BufferSize);
+    if (!Buffer) {
+        return FALSE;
+    }
+
+    if (!Rtl->CryptGenRandom(Rtl, BufferSize, Buffer)) {
+        goto Error;
+    }
+
+    Buffer[2] = 0x0;
+    Buffer[57] = 0x0;
+
+    BytesReplaced = Rtl->FindAndReplaceByte(BufferSize,
+                                            Buffer,
+                                            0x0,
+                                            0xcc);
+
+    if (BytesReplaced < 2) {
+        __debugbreak();
+        goto Error;
+    }
+
+    Success = TRUE;
+    goto End;
+
+Error:
+
+    Success = FALSE;
+    Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    *BufferPointer = Buffer;
+
+    return Success;
+}
+
 
 TEST_MODULE_INITIALIZE(UnitTest1Init)
 {
@@ -140,6 +198,362 @@ namespace TestDictionary
                     &IsProcessTerminating
                 )
             );
+        }
+
+        TEST_METHOD(AddWord2)
+        {
+            DICTIONARY_CREATE_FLAGS CreateFlags;
+            PDICTIONARY Dictionary;
+            BOOLEAN IsProcessTerminating;
+            LONGLONG EntryCount;
+            PBYTE RandomBuffer;
+            ULONG BufferSize = 1 << 16; // 64 KB
+            ULONGLONG BytesReplaced;
+
+            CreateFlags.AsULong = 0;
+            IsProcessTerminating = TRUE;
+
+            Assert::IsTrue(
+                Api->CreateDictionary(Rtl,
+                                      Allocator,
+                                      CreateFlags,
+                                      &Dictionary)
+            );
+
+            RandomBuffer = (PBYTE)Allocator->Malloc(Allocator, BufferSize);
+            Assert::IsTrue(RandomBuffer != NULL);
+
+            Assert::IsTrue(Rtl->CryptGenRandom(Rtl, BufferSize, RandomBuffer));
+
+            RandomBuffer[2] = 0x0;
+            RandomBuffer[57] = 0x0;
+
+            BytesReplaced = Rtl->FindAndReplaceByte(BufferSize,
+                                                    RandomBuffer,
+                                                    0x0,
+                                                    0xcc);
+
+            Assert::IsTrue(BytesReplaced >= 2);
+
+            //
+            // NULL terminate the buffer.
+            //
+
+            RandomBuffer[BufferSize-1] = 0x0;
+
+            Assert::IsTrue(
+                Api->AddWord(Dictionary,
+                             RandomBuffer,
+                             &EntryCount)
+            );
+
+            Assert::IsTrue(EntryCount == 1);
+
+            Assert::IsTrue(
+                Api->DestroyDictionary(
+                    &Dictionary,
+                    &IsProcessTerminating
+                )
+            );
+        }
+
+        TEST_METHOD(CreateHistogram1ShortestString)
+        {
+            BOOLEAN Result1;
+            BOOLEAN Result2;
+            PCLONG_STRING String;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+            LARGE_INTEGER Frequency;
+            LARGE_INTEGER Start1;
+            LARGE_INTEGER Start2;
+            LARGE_INTEGER End1;
+            LARGE_INTEGER End2;
+            LARGE_INTEGER Elapsed1;
+            LARGE_INTEGER Elapsed2;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            String = &ElbowString;
+
+            QueryPerformanceFrequency(&Frequency);
+
+            QueryPerformanceCounter(&Start1);
+            Result1 = CreateHistogramInline(String, &HistogramA);
+            QueryPerformanceCounter(&End1);
+
+            Elapsed1.QuadPart = End1.QuadPart - Start1.QuadPart;
+
+            Assert::IsTrue(Result1);
+
+            QueryPerformanceCounter(&Start2);
+            Result2 = CreateHistogramAvx2Inline(String,
+                                                &HistogramB.Histogram1,
+                                                &HistogramB.Histogram2);
+            QueryPerformanceCounter(&End2);
+
+            Elapsed2.QuadPart = End2.QuadPart - Start2.QuadPart;
+
+            Assert::IsTrue(Result2);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Comparison = CompareHistogramsAlignedAvx2Inline(Histogram1,
+                                                            Histogram2);
+
+
+            //Assert::IsTrue(Elapsed2.QuadPart < Elapsed1.QuadPart);
+            Assert::IsTrue(Comparison == GenericEqual);
+
+        }
+
+        TEST_METHOD(CreateHistogram1StringLongerThan32Bytes)
+        {
+            BOOLEAN Result1;
+            BOOLEAN Result2;
+            PCLONG_STRING String;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+            LARGE_INTEGER Frequency;
+            LARGE_INTEGER Start1;
+            LARGE_INTEGER Start2;
+            LARGE_INTEGER End1;
+            LARGE_INTEGER End2;
+            LARGE_INTEGER Elapsed1;
+            LARGE_INTEGER Elapsed2;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            String = &QuickFoxString;
+
+            QueryPerformanceFrequency(&Frequency);
+
+            QueryPerformanceCounter(&Start1);
+            Result1 = CreateHistogramInline(String, &HistogramA);
+            QueryPerformanceCounter(&End1);
+
+            Elapsed1.QuadPart = End1.QuadPart - Start1.QuadPart;
+
+            Assert::IsTrue(Result1);
+
+            QueryPerformanceCounter(&Start2);
+            Result2 = CreateHistogramAvx2Inline(String,
+                                                &HistogramB.Histogram1,
+                                                &HistogramB.Histogram2);
+            QueryPerformanceCounter(&End2);
+
+            Elapsed2.QuadPart = End2.QuadPart - Start2.QuadPart;
+
+            Assert::IsTrue(Result2);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Comparison = CompareHistogramsAlignedAvx2Inline(Histogram1,
+                                                            Histogram2);
+
+
+            //Assert::IsTrue(Elapsed2.QuadPart < Elapsed1.QuadPart);
+            Assert::IsTrue(Comparison == GenericEqual);
+
+        }
+
+        TEST_METHOD(CreateHistogram1StringLongerThan64Bytes)
+        {
+            BOOLEAN Result1;
+            BOOLEAN Result2;
+            PCLONG_STRING String;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+            LARGE_INTEGER Frequency;
+            LARGE_INTEGER Start1;
+            LARGE_INTEGER Start2;
+            LARGE_INTEGER End1;
+            LARGE_INTEGER End2;
+            LARGE_INTEGER Elapsed1;
+            LARGE_INTEGER Elapsed2;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            String = &QuickLazyString;
+
+            QueryPerformanceFrequency(&Frequency);
+
+            QueryPerformanceCounter(&Start1);
+            Result1 = CreateHistogramInline(String, &HistogramA);
+            QueryPerformanceCounter(&End1);
+
+            Elapsed1.QuadPart = End1.QuadPart - Start1.QuadPart;
+
+            Assert::IsTrue(Result1);
+
+            QueryPerformanceCounter(&Start2);
+            Result2 = CreateHistogramAvx2Inline(String,
+                                                &HistogramB.Histogram1,
+                                                &HistogramB.Histogram2);
+            QueryPerformanceCounter(&End2);
+
+            Elapsed2.QuadPart = End2.QuadPart - Start2.QuadPart;
+
+            Assert::IsTrue(Result2);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Comparison = CompareHistogramsAlignedAvx2Inline(Histogram1,
+                                                            Histogram2);
+
+
+            //Assert::IsTrue(Elapsed2.QuadPart > Elapsed1.QuadPart);
+            Assert::IsTrue(Comparison == GenericEqual);
+
+        }
+
+
+        TEST_METHOD(CreateHistogram3LongString)
+        {
+            PBYTE Buffer;
+            ULONG BufferSize = 1 << 16; // 64 KB
+            LONG_STRING String;
+            BOOLEAN Result1;
+            BOOLEAN Result2;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+            LARGE_INTEGER Frequency;
+            LARGE_INTEGER Start1;
+            LARGE_INTEGER Start2;
+            LARGE_INTEGER End1;
+            LARGE_INTEGER End2;
+            LARGE_INTEGER Elapsed1;
+            LARGE_INTEGER Elapsed2;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            Assert::IsTrue(
+                MakeRandomString(Rtl,
+                                 Allocator,
+                                 BufferSize,
+                                 &Buffer)
+            );
+
+            String.Length = BufferSize;
+            String.Hash = 0;
+            String.Buffer = Buffer;
+
+            QueryPerformanceFrequency(&Frequency);
+
+            QueryPerformanceCounter(&Start1);
+            Result1 = CreateHistogramInline(&String, &HistogramA);
+            QueryPerformanceCounter(&End1);
+
+            Elapsed1.QuadPart = End1.QuadPart - Start1.QuadPart;
+
+            Assert::IsTrue(Result1);
+
+            QueryPerformanceCounter(&Start2);
+            Result2 = CreateHistogramAvx2Inline(&String,
+                                                &HistogramB.Histogram1,
+                                                &HistogramB.Histogram2);
+            QueryPerformanceCounter(&End2);
+
+            Elapsed2.QuadPart = End2.QuadPart - Start2.QuadPart;
+
+            Assert::IsTrue(Result2);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Comparison = CompareHistogramsAlignedAvx2Inline(Histogram1,
+                                                            Histogram2);
+
+
+            Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+            Assert::IsTrue(Elapsed2.QuadPart < Elapsed1.QuadPart);
+            Assert::IsTrue(Comparison == GenericEqual);
+        }
+
+        TEST_METHOD(CreateHistogram16MBString)
+        {
+            PBYTE Buffer;
+            ULONG BufferSize = 1 << 24; // 16 MB
+            LONG_STRING String;
+            BOOLEAN Result1;
+            BOOLEAN Result2;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+            LARGE_INTEGER Frequency;
+            LARGE_INTEGER Start1;
+            LARGE_INTEGER Start2;
+            LARGE_INTEGER End1;
+            LARGE_INTEGER End2;
+            LARGE_INTEGER Elapsed1;
+            LARGE_INTEGER Elapsed2;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            Assert::IsTrue(
+                MakeRandomString(Rtl,
+                                 Allocator,
+                                 BufferSize,
+                                 &Buffer)
+            );
+
+            String.Length = BufferSize;
+            String.Hash = 0;
+            String.Buffer = Buffer;
+
+            QueryPerformanceFrequency(&Frequency);
+
+            QueryPerformanceCounter(&Start1);
+            Result1 = CreateHistogramInline(&String, &HistogramA);
+            QueryPerformanceCounter(&End1);
+
+            Elapsed1.QuadPart = End1.QuadPart - Start1.QuadPart;
+
+            Assert::IsTrue(Result1);
+
+            QueryPerformanceCounter(&Start2);
+            Result2 = CreateHistogramAvx2Inline(&String,
+                                                &HistogramB.Histogram1,
+                                                &HistogramB.Histogram2);
+            QueryPerformanceCounter(&End2);
+
+            Elapsed2.QuadPart = End2.QuadPart - Start2.QuadPart;
+
+            Assert::IsTrue(Result2);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Comparison = CompareHistogramsAlignedAvx2Inline(Histogram1,
+                                                            Histogram2);
+
+
+            Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+            Assert::IsTrue(Comparison == GenericEqual);
         }
 
         TEST_METHOD(AddWordNullStringRejected)

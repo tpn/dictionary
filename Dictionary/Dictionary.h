@@ -102,7 +102,10 @@ typedef struct _LONG_STRING {
     // Pointer to the string.
     //
 
-    PBYTE Buffer;
+    union {
+        PCHAR AsCharBuffer;
+        PBYTE Buffer;
+    };
 
 } LONG_STRING;
 typedef LONG_STRING *PLONG_STRING;
@@ -358,6 +361,59 @@ BOOLEAN
 typedef SET_MAXIMUM_WORD_LENGTH *PSET_MAXIMUM_WORD_LENGTH;
 
 //
+// Internal functionality exposed to facilitate benchmarking.
+//
+
+#define NUMBER_OF_CHARACTER_BITS 256
+
+typedef union DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM {
+    YMMWORD Ymm[32];
+    XMMWORD Xmm[64];
+    ULONG Counts[NUMBER_OF_CHARACTER_BITS];
+} CHARACTER_HISTOGRAM;
+C_ASSERT(sizeof(CHARACTER_HISTOGRAM) == 1024);
+typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
+typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
+
+typedef struct DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM_V4 {
+    CHARACTER_HISTOGRAM Histogram1;
+    CHARACTER_HISTOGRAM Histogram2;
+    CHARACTER_HISTOGRAM Histogram3;
+    CHARACTER_HISTOGRAM Histogram4;
+} CHARACTER_HISTOGRAM_V4;
+C_ASSERT(sizeof(CHARACTER_HISTOGRAM_V4) == 4096);
+typedef CHARACTER_HISTOGRAM_V4 *PCHARACTER_HISTOGRAM_V4;
+
+typedef
+RTL_GENERIC_COMPARE_RESULTS
+(NTAPI COMPARE_HISTOGRAMS)(
+    _In_ PCCHARACTER_HISTOGRAM Left,
+    _In_ PCCHARACTER_HISTOGRAM Right
+    );
+typedef COMPARE_HISTOGRAMS *PCOMPARE_HISTOGRAMS;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_HISTOGRAM)(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram)) PCHARACTER_HISTOGRAM Histogram
+    );
+typedef CREATE_HISTOGRAM *PCREATE_HISTOGRAM;
+
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_HISTOGRAM2)(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram))
+        PCHARACTER_HISTOGRAM Histogram,
+    _Inout_updates_bytes_(sizeof(*TempHistogram))
+        PCHARACTER_HISTOGRAM TempHistogram
+    );
+typedef CREATE_HISTOGRAM2 *PCREATE_HISTOGRAM2;
+
+//
 // Define the main dictionary API structure.
 //
 
@@ -389,6 +445,16 @@ typedef struct _DICTIONARY_FUNCTIONS {
 
     PSET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
     PSET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
+
+    //
+    // Internal functionality exposed to facilitate benchmarking.
+    //
+
+    PCOMPARE_HISTOGRAMS CompareHistograms;
+    PCREATE_HISTOGRAM CreateHistogram;
+    PCREATE_HISTOGRAM2 CreateHistogramAvx2C;
+    PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
+    PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedAsm;
 
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
@@ -425,6 +491,13 @@ LoadDictionaryModule(
         "CompareWords",
         "SetMinimumWordLength",
         "SetMaximumWordLength",
+
+        "CompareHistograms",
+        "CreateHistogram",
+        "CreateHistogramAvx2C",
+        "CreateHistogramAvx2AlignedC",
+        "CreateHistogramAvx2AlignedAsm",
+
     };
 
     ULONG BitmapBuffer[(ALIGN_UP(ARRAYSIZE(Names), sizeof(ULONG) << 3) >> 5)+1];
@@ -473,6 +546,7 @@ LoadDictionaryModule(
 // API exports.
 //
 
+/*
 DICTIONARY_API CREATE_DICTIONARY CreateDictionary;
 DICTIONARY_API DESTROY_DICTIONARY DestroyDictionary;
 
@@ -486,6 +560,13 @@ DICTIONARY_API GET_DICTIONARY_STATS GetDictionaryStats;
 DICTIONARY_API COMPARE_WORDS CompareWords;
 DICTIONARY_API SET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
 DICTIONARY_API SET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
+
+DICTIONARY_API CREATE_HISTOGRAM CreateHistogram;
+DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2C;
+DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
+DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2AlignedAsm;
+*/
+
 
 #ifdef __cplusplus
 } // extern "C"

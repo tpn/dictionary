@@ -328,8 +328,8 @@ Return Value:
 --*/
 {
     ULONG Remaining;
-    ULONG LeftStringAlignment;
-    ULONG RightStringAlignment;
+    ULONGLONG LeftStringAlignment;
+    ULONGLONG RightStringAlignment;
 
     LONG Count;
     LONG EqualMask;

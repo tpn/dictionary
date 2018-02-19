@@ -43,14 +43,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{B512054C-A17F-4E70-9AD2-1C79856AC0B1}</ProjectGuid>
-    <RootNamespace>Dictionary</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <ProjectGuid>{C4D67F0A-CD69-42D1-A07A-24B25219A716}</ProjectGuid>
+    <RootNamespace>ScratchExe</RootNamespace>
+    <TargetPlatformVersion>10.0.14393.0</TargetPlatformVersion>
     <PlatformToolset>v141</PlatformToolset>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
   <Import Project="..\Tracer.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -65,44 +66,30 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+  <PropertyGroup>
+    <TargetName>benchmark</TargetName>
+    <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>Dictionary.def</ModuleDefinitionFile>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <ClCompile>
-      <PreprocessorDefinitions>_DICTIONARY_INTERNAL_BUILD;_DICTIONARY_DLL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <!--<EnablePREfast>true</EnablePREfast>-->
-    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="DictionaryPrivate.h" />
-    <ClInclude Include="HistogramInline.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Dictionary.h" />
+    <ClInclude Include="..\Rtl\__C_specific_handler.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AddWord.c" />
-    <ClCompile Include="Anagram.c" />
-    <ClCompile Include="DictionaryTls.c" />
-    <ClCompile Include="FindWord.c" />
-    <ClCompile Include="RemoveWord.c" />
+    <ClCompile Include="..\Rtl\__C_specific_handler.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Rtl\__C_specific_handler.c" />
-    <ClCompile Include="dllmain.c" />
-    <ClCompile Include="Dictionary.c" />
-    <ClCompile Include="Tables.c" />
-    <ClCompile Include="Histogram.c" />
-    <ClCompile Include="Word.c" />
+    <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="HistogramAsm.asm"/>
+    <MASM Include="Benchmark.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

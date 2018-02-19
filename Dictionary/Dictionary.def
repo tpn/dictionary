@@ -1,0 +1,19 @@
+LIBRARY Dictionary
+EXPORTS
+    CreateDictionary
+    DestroyDictionary
+    AddWord
+    FindWord
+    RemoveWord
+    GetWordStats
+    GetWordAnagrams
+    GetDictionaryStats
+    CompareWords
+    SetMinimumWordLength
+    SetMaximumWordLength
+    CreateHistogram
+    CreateHistogramAvx2C
+    CreateHistogramAvx2AlignedC
+    CreateHistogramAvx2AlignedAsm
+    CompareHistograms=CompareHistogramsAlignedAvx2
+    CompareHistogramsAlignedAvx2
