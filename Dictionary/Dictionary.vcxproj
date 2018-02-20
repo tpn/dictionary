@@ -70,7 +70,6 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Dictionary.def</ModuleDefinitionFile>
     </Link>
     <ClCompile>

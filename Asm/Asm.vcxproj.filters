@@ -51,7 +51,7 @@
     <MASM Include="Misc.asm">
       <Filter>Source Files</Filter>
     </MASM>
-    <MASM Include="Histogram.asm">
+    <MASM Include="CopyPages.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

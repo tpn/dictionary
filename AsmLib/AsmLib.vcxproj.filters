@@ -40,8 +40,5 @@
     <MASM Include="..\Asm\FillPages.asm">
       <Filter>Source Files</Filter>
     </MASM>
-    <MASM Include="..\Asm\Histogram.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
   </ItemGroup>
 </Project>

@@ -13,7 +13,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VC_IncludePath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VC_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

@@ -15,9 +15,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScratchExe", "ScratchExe\ScratchExe.vcxproj", "{681468CA-92CE-47D8-95D0-FB906CB5E80A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dictionary", "Dictionary\Dictionary.vcxproj", "{B512054C-A17F-4E70-9AD2-1C79856AC0B1}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A74874AC-5F75-42B8-9E94-4028DE4D1829} = {A74874AC-5F75-42B8-9E94-4028DE4D1829}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestDictionary", "TestDictionary\TestDictionary.vcxproj", "{500B3B07-E505-4566-85FA-8B64843EC684}"
 EndProject

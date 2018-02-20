@@ -8380,9 +8380,35 @@ static CONST WCHAR IntegerToWCharTable[] = {
     L'F'
 };
 
+static CONST CHAR IntegerToCharTable[] = {
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F'
+};
+
+typedef
+USHORT
+(NTAPI COUNT_NUMBER_OF_DIGITS)(
+    _In_ ULONG Value
+    );
+typedef COUNT_NUMBER_OF_DIGITS *PCOUNT_NUMBER_OF_DIGITS;
+
 FORCEINLINE
 USHORT
-CountNumberOfDigits(_In_ ULONG Value)
+CountNumberOfDigitsInline(_In_ ULONG Value)
 {
     USHORT Count = 0;
 
@@ -8394,9 +8420,16 @@ CountNumberOfDigits(_In_ ULONG Value)
     return Count;
 }
 
+typedef
+USHORT
+(NTAPI COUNT_NUMBER_OF_LONG_LONG_DIGITS)(
+    _In_ ULONGLONG Value
+    );
+typedef COUNT_NUMBER_OF_LONG_LONG_DIGITS *PCOUNT_NUMBER_OF_LONG_LONG_DIGITS;
+
 FORCEINLINE
 USHORT
-CountNumberOfLongLongDigits(_In_ ULONGLONG Value)
+CountNumberOfLongLongDigitsInline(_In_ ULONGLONG Value)
 {
     USHORT Count = 0;
 
@@ -8407,10 +8440,21 @@ CountNumberOfLongLongDigits(_In_ ULONGLONG Value)
 
     return Count;
 }
+
+typedef
+BOOLEAN
+(NTAPI APPEND_INTEGER_TO_UNICODE_STRING)(
+    _In_ PUNICODE_STRING String,
+    _In_ ULONG Integer,
+    _In_ USHORT NumberOfDigits,
+    _In_opt_ WCHAR Trailer
+    );
+typedef APPEND_INTEGER_TO_UNICODE_STRING
+      *PAPPEND_INTEGER_TO_UNICODE_STRING;
 
 FORCEINLINE
 BOOLEAN
-AppendIntegerToUnicodeString(
+AppendIntegerToUnicodeStringInline(
     _In_ PUNICODE_STRING String,
     _In_ ULONG Integer,
     _In_ USHORT NumberOfDigits,
@@ -8477,7 +8521,7 @@ Return Value:
     // specified.
     //
 
-    ActualNumberOfDigits = CountNumberOfDigits(Integer);
+    ActualNumberOfDigits = CountNumberOfDigitsInline(Integer);
 
     if (ActualNumberOfDigits > NumberOfDigits) {
         return FALSE;
@@ -8548,9 +8592,20 @@ Return Value:
     return TRUE;
 }
 
+typedef
+BOOLEAN
+(NTAPI APPEND_LONG_LONG_INTEGER_TO_UNICODE_STRING)(
+    _In_ PUNICODE_STRING String,
+    _In_ ULONGLONG Integer,
+    _In_ USHORT NumberOfDigits,
+    _In_opt_ WCHAR Trailer
+    );
+typedef APPEND_LONG_LONG_INTEGER_TO_UNICODE_STRING
+      *PAPPEND_LONG_LONG_INTEGER_TO_UNICODE_STRING;
+
 FORCEINLINE
 BOOLEAN
-AppendLongLongIntegerToUnicodeString(
+AppendLongLongIntegerToUnicodeStringInline(
     _In_ PUNICODE_STRING String,
     _In_ ULONGLONG Integer,
     _In_ USHORT NumberOfDigits,
@@ -8617,7 +8672,7 @@ Return Value:
     // specified.
     //
 
-    ActualNumberOfDigits = CountNumberOfLongLongDigits(Integer);
+    ActualNumberOfDigits = CountNumberOfLongLongDigitsInline(Integer);
 
     if (ActualNumberOfDigits > NumberOfDigits) {
         return FALSE;
