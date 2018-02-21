@@ -29,9 +29,9 @@ HMODULE GlobalModule = 0;
 #define TIMESTAMP_TO_NANOSECONDS  1000000000ULL
 
 #ifndef ASSERT
-#define ASSERT(Condition)   \
-    if (!(Condition)) {     \
-        __debugbreak();     \
+#define ASSERT(Condition) \
+    if (!(Condition)) {   \
+        __debugbreak();   \
     }
 #endif
 
@@ -368,6 +368,7 @@ TestCreateBuffer(
     CaughtException = FALSE;
 
     TRY_PROBE_MEMORY {
+
         *Unusable = 1;
 
     } CATCH_EXCEPTION_ACCESS_VIOLATION {
@@ -391,9 +392,8 @@ AppendIntegerToCharBuffer(
     )
 {
     PCHAR Buffer;
+    USHORT Offset;
     USHORT NumberOfDigits;
-    USHORT BytesUsed;
-    const ULONGLONG Base = 10;
     ULONGLONG Digit;
     ULONGLONG Value;
     ULONGLONG Count;
@@ -414,8 +414,8 @@ AppendIntegerToCharBuffer(
     // back-to-front.)
     //
 
-    BytesUsed = (NumberOfDigits - 1) * sizeof(Char);
-    Dest = (PCHAR)RtlOffsetToPointer(Buffer, BytesUsed);
+    Offset = (NumberOfDigits - 1) * sizeof(Char);
+    Dest = (PCHAR)RtlOffsetToPointer(Buffer, Offset);
 
     Count = 0;
     Bytes = 0;
@@ -430,13 +430,13 @@ AppendIntegerToCharBuffer(
     do {
         Count++;
         Bytes += sizeof(Char);
-        Digit = Value % Base;
-        Value = Value / Base;
-        Char = IntegerToCharTable[Digit];
+        Digit = Value % 10;
+        Value = Value / 10;
+        Char = ((CHAR)Digit + '0');
         *Dest-- = Char;
     } while (Value != 0);
 
-    *BufferPointer = RtlOffsetToPointer(Buffer, BytesUsed);
+    *BufferPointer = RtlOffsetToPointer(Buffer, Bytes);
 
     return;
 }
@@ -472,20 +472,40 @@ AppendCharBufferToCharBuffer(
     return;
 }
 
-#define OUTPUT_STR(String) \
+FORCEINLINE
+VOID
+AppendCharToCharBuffer(
+    _Inout_ PPCHAR BufferPointer,
+    _In_ CHAR Char
+    )
+{
+    PCHAR Buffer;
+
+    Buffer = *BufferPointer;
+    *Buffer = Char;
+    *BufferPointer = Buffer + 1;
+}
+
+#define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 
-#define OUTPUT_INT(Value) \
+#define OUTPUT_STRING(String) AppendStringToCharBuffer(&Output, String)
+
+#define OUTPUT_CHR(Char) AppendCharToCharBuffer(&Output, Char)
+#define OUTPUT_SEP() AppendCharToCharBuffer(&Output, ',')
+#define OUTPUT_LF() AppendCharToCharBuffer(&Output, '\n')
+
+#define OUTPUT_INT(Value)                      \
     AppendIntegerToCharBuffer(&Output, Value);
 
-#define OUTPUT_FLUSH2()                                                        \
-    BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer);   \
-    Success = WriteConsoleA(OutputHandle,                                      \
-                            OutputBuffer,                                      \
-                            BytesToWrite.LowPart,                              \
-                            &CharsWritten,                                     \
-                            NULL);                                             \
-    ASSERT(Success);                                                           \
+#define OUTPUT_FLUSH2()                                                      \
+    BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
+    Success = WriteConsoleA(OutputHandle,                                    \
+                            OutputBuffer,                                    \
+                            BytesToWrite.LowPart,                            \
+                            &CharsWritten,                                   \
+                            NULL);                                           \
+    ASSERT(Success);                                                         \
     Output = OutputBuffer
 
 #define OUTPUT_FLUSH()                                                         \
@@ -612,21 +632,222 @@ Scratch3(
     //ASSERT(Elapsed2.QuadPart < Elapsed1.QuadPart);
     ASSERT(Comparison == GenericEqual);
 
-    OUTPUT_STR("CreateHistogram: ");
+    OUTPUT_RAW("CreateHistogram: ");
     OUTPUT_INT(Nanoseconds1.QuadPart);
-    OUTPUT_STR(" ns (");
+    OUTPUT_RAW(" ns (");
     OUTPUT_INT(Microseconds1.QuadPart);
-    OUTPUT_STR(" us)\r\n");
+    OUTPUT_RAW(" us)\r\n");
     OUTPUT_FLUSH2();
 
-    OUTPUT_STR("CreateHistogramAvx2: ");
+    OUTPUT_RAW("CreateHistogramAvx2: ");
     OUTPUT_INT(Nanoseconds2.QuadPart);
-    OUTPUT_STR(" ns (");
+    OUTPUT_RAW(" ns (");
     OUTPUT_INT(Microseconds2.QuadPart);
-    OUTPUT_STR(" us)\r\n");
+    OUTPUT_RAW(" us)\r\n");
     OUTPUT_FLUSH2();
 
 }
+
+typedef struct _TIMESTAMP {
+    ULONGLONG Id;
+    ULONGLONG Count;
+    STRING Name;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    LARGE_INTEGER Elapsed;
+    ULARGE_INTEGER Total;
+    ULARGE_INTEGER Nanoseconds;
+    ULARGE_INTEGER Minimum;
+    ULARGE_INTEGER Maximum;
+} TIMESTAMP;
+typedef TIMESTAMP *PTIMESTAMP;
+
+#define INIT_TIMESTAMP(Idx, Namex)                       \
+    ZeroStruct(Timestamp##Idx);                          \
+    Timestamp##Idx##.Id = Idx;                           \
+    Timestamp##Idx##.Name.Length = sizeof(Namex)-1;      \
+    Timestamp##Idx##.Name.MaximumLength = sizeof(Namex); \
+    Timestamp##Idx##.Name.Buffer = Namex;                \
+    Timestamp##Idx##.Minimum.QuadPart = (ULONGLONG)-1
+
+#define RESET_TIMESTAMP(Id)                            \
+    Timestamp##Id##.Count = 0; \
+    Timestamp##Id##.Total.QuadPart = 0; \
+    Timestamp##Id##.Minimum.QuadPart = (ULONGLONG)-1; \
+    Timestamp##Id##.Maximum.QuadPart = 0
+
+#define START_TIMESTAMP(Id)                         \
+    ++Timestamp##Id##.Count;                        \
+    QueryPerformanceCounter(&Timestamp##Id##.Start)
+
+#define END_TIMESTAMP(Id)                                                   \
+    QueryPerformanceCounter(&Timestamp##Id##.End);                          \
+    Timestamp##Id##.Elapsed.QuadPart = (                                    \
+        Timestamp##Id##.End.QuadPart -                                      \
+        Timestamp##Id##.Start.QuadPart                                      \
+    );                                                                      \
+    Timestamp##Id##.Nanoseconds.QuadPart = (                                \
+        Timestamp##Id##.Elapsed.QuadPart *                                  \
+        TIMESTAMP_TO_NANOSECONDS                                            \
+    );                                                                      \
+    Timestamp##Id##.Nanoseconds.QuadPart /= Frequency.QuadPart;             \
+    Timestamp##Id##.Total.QuadPart += Timestamp##Id##.Nanoseconds.QuadPart; \
+    if (Timestamp##Id##.Minimum.QuadPart >                                  \
+        Timestamp##Id##.Nanoseconds.QuadPart) {                             \
+            Timestamp##Id##.Minimum.QuadPart = (                            \
+                Timestamp##Id##.Nanoseconds.QuadPart                        \
+            );                                                              \
+    }                                                                       \
+    if (Timestamp##Id##.Maximum.QuadPart <                                  \
+        Timestamp##Id##.Nanoseconds.QuadPart) {                             \
+            Timestamp##Id##.Maximum.QuadPart = (                            \
+                Timestamp##Id##.Nanoseconds.QuadPart                        \
+            );                                                              \
+    }
+
+#define FINISH_TIMESTAMP(Id, Length, Iterations)  \
+    OUTPUT_STRING(&Timestamp##Id##.Name);         \
+    OUTPUT_SEP();                                 \
+    OUTPUT_INT(*Length);                          \
+    OUTPUT_SEP();                                 \
+    OUTPUT_INT(Iterations);                       \
+    OUTPUT_SEP();                                 \
+    OUTPUT_INT(Timestamp##Id##.Minimum.QuadPart); \
+    OUTPUT_SEP();                                 \
+    OUTPUT_INT(Timestamp##Id##.Maximum.QuadPart); \
+    OUTPUT_LF()
+
+VOID
+Scratch4(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PDICTIONARY_FUNCTIONS Api
+    )
+{
+    BOOL Success;
+    ULONG Index;
+    ULONG Iterations;
+    PBYTE Buffer;
+    ULARGE_INTEGER BytesToWrite;
+    LONG_STRING String;
+    BOOLEAN Result;
+    CHARACTER_HISTOGRAM HistogramA;
+    CHARACTER_HISTOGRAM_V4 HistogramB;
+    HANDLE OutputHandle;
+    LARGE_INTEGER Frequency;
+    TIMESTAMP Timestamp1;
+    TIMESTAMP Timestamp2;
+    ULONG BufferSize = 1 << 16;
+    ULONGLONG OutputBufferSize;
+    //ULONG BytesWritten;
+    ULONG CharsWritten;
+    PCHAR Output;
+    PCHAR OutputBuffer;
+    ULONG Lengths[] = {
+        1,
+        5,
+        7,
+        10,
+        15,
+        18,
+        31,
+        39,
+        50,
+        60,
+        64,
+        100,
+        200,
+        3000,
+        0
+    };
+    PULONG Length;
+
+    ZeroStruct(HistogramA);
+    ZeroStruct(HistogramB);
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ASSERT(OutputHandle);
+
+    ASSERT(SetConsoleCP(20127));
+
+    ASSERT(
+        MakeRandomString(Rtl,
+                         Allocator,
+                         BufferSize,
+                         &Buffer)
+    );
+
+    Success = CreateBuffer(Rtl, NULL, 1, 0, &OutputBufferSize, &OutputBuffer);
+    ASSERT(Success);
+
+    Output = OutputBuffer;
+
+    String.Length = BufferSize;
+    String.Hash = 0;
+    String.Buffer = Buffer;
+
+    QueryPerformanceFrequency(&Frequency);
+
+
+    INIT_TIMESTAMP(1, "CreateHistogram     ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx2C");
+
+    OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
+
+    Iterations = 100000;
+    Length = Lengths;
+
+    do {
+        RESET_TIMESTAMP(1);
+        for (Index = 0; Index < Iterations; Index++) {
+            START_TIMESTAMP(1);
+            Result = Api->CreateHistogram(&String, &HistogramA);
+            END_TIMESTAMP(1);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(1, Length, Iterations);
+
+        OUTPUT_FLUSH2();
+
+        RESET_TIMESTAMP(2);
+        for (Index = 0; Index < Iterations; Index++) {
+            START_TIMESTAMP(2);
+            Result = Api->CreateHistogramAvx2C(&String,
+                                               &HistogramB.Histogram1,
+                                               &HistogramB.Histogram2);
+            END_TIMESTAMP(2);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(2, Length, Iterations);
+
+        OUTPUT_FLUSH2();
+    } while (*(++Length));
+
+    /*
+    Length = Lengths;
+
+    do {
+        RESET_TIMESTAMP(2);
+        for (Index = 0; Index < Iterations; Index++) {
+            START_TIMESTAMP(2);
+            Result = Api->CreateHistogramAvx2C(&String,
+                                               &HistogramB.Histogram1,
+                                               &HistogramB.Histogram2);
+            END_TIMESTAMP(2);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(2, Length, Iterations);
+        OUTPUT_FLUSH2();
+    } while (*(++Length));
+    */
+
+    Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+    OUTPUT_FLUSH2();
+
+}
+
+
 
 DECLSPEC_NORETURN
 VOID
@@ -704,7 +925,7 @@ mainCRTStartup()
 
     //Scratch2(Rtl, Allocator, Api);
 
-    Scratch3(Rtl, Allocator, Api, 1 << 24, NULL, NULL);
+    Scratch4(Rtl, Allocator, Api);
 
 Error:
 
