@@ -38,7 +38,10 @@ CHARACTER_HISTOGRAM ends
 PCHARACTER_HISTOGRAM typedef ptr CHARACTER_HISTOGRAM
 
 CHARACTER_HISTOGRAM_V4 struct
-    Count   dd 1024 dup (?)
+    Histogram1 CHARACTER_HISTOGRAM { }
+    Histogram2 CHARACTER_HISTOGRAM { }
+    Histogram3 CHARACTER_HISTOGRAM { }
+    Histogram4 CHARACTER_HISTOGRAM { }
 CHARACTER_HISTOGRAM_V4 ends
 PCHARACTER_HISTOGRAM_V4 typedef ptr CHARACTER_HISTOGRAM_V4
 
@@ -61,7 +64,7 @@ Locals ends
 ;
 
 String typedef LONG_STRING
-Histogram typedef CHARACTER_HISTOGRAM
+Histogram typedef CHARACTER_HISTOGRAM_V4
 
 ;++
 ;
@@ -69,9 +72,7 @@ Histogram typedef CHARACTER_HISTOGRAM
 ; CreateHistogramAvx2AlignedAsm(
 ;     _In_ PCLONG_STRING String,
 ;     _Inout_updates_bytes_(sizeof(*Histogram))
-;         PCHARACTER_HISTOGRAM Histogram,
-;     _Inout_updates_bytes_(sizeof(*TempHistogram))
-;         PCHARACTER_HISTOGRAM TempHistogram
+;         PCHARACTER_HISTOGRAM_V4 Histogram
 ;     );
 ;
 ; Routine Description:
@@ -86,25 +87,13 @@ Histogram typedef CHARACTER_HISTOGRAM
 ;   Histogram (rdx) - Supplies an address that receives the histogram for the
 ;       given input string.
 ;
-;   TempHistogram (r8) - Supplies the address of a temporary histogram that
-;       can be used during calculation.
-;
 ; Return Value:
 ;
 ;   TRUE on success, FALSE on failure.
 ;
 ;--
 
-        NESTED_ENTRY CreateHistogramAvx2AlignedAsm, _TEXT$00
-        END_PROLOGUE
-
-;
-; Home our parameters.
-;
-
-        mov     Locals.HomeRcx[rsp], rcx                ; Home rcx.
-        mov     Locals.HomeRdx[rsp], rdx                ; Home rdx.
-        mov     Locals.HomeR8[rsp], r8                  ; Home r8.
+        LEAF_ENTRY CreateHistogramAvx2AlignedAsm, _TEXT$00
 
 ;
 ; Clear return value (Success = FALSE).
@@ -119,8 +108,6 @@ Histogram typedef CHARACTER_HISTOGRAM
         test    rcx, rcx                                ; Is rcx NULL?
         jz      Cha99                                   ; Yes, abort.
         test    rdx, rdx                                ; Is rdx NULL?
-        jz      Cha99                                   ; Yes, abort.
-        test    r8, r8                                  ; Is r8 NULL?
         jz      Cha99                                   ; Yes, abort.
 
 ;
@@ -156,11 +143,11 @@ Histogram typedef CHARACTER_HISTOGRAM
 ;
 
         mov     r8, rdx                             ; Load 1st histo buffer.
-        lea     r9,  [r8 + 100h]                    ; Load 2nd histo buffer.
-        ;lea     r10, [r8 + 200h]                    ; Load 2nd histo buffer.
-        ;lea     r11, [r8 + 300h]                    ; Load 2nd histo buffer.
+        lea     r9, Histogram.Histogram2[r8]        ; Load 2nd histo buffer.
         mov     rdx, String.Buffer[rcx]             ; Load string buffer.
         mov     ecx, String.Length[rcx]             ; Load string length.
+        shr     ecx, 5                              ; Divide by 32 to get loop
+                                                    ; iterations.
 
 ;
 ; Top of the histogram loop.
@@ -169,77 +156,208 @@ Histogram typedef CHARACTER_HISTOGRAM
         align 16
 
 ;
-; Load the first 32 bytes into ymm0 and the second 32 bytes into ymm1.
-; Duplicate each value into ymm1 and ymm3 respectively.
+; Load the first 32 bytes into ymm0.  Duplicate the lower 16 bytes in xmm0 and
+; xmm1, then extract the high 16 bytes into xmm2 and xmm3.
 ;
 
-Cha50:  vmovntdqa   ymm0, ymmword ptr [rdx]             ; Load first 32 bytes.
-        vmovntdqa   ymm2, ymmword ptr [rdx+20h]         ; Load bytes 33-64.
-        vmovdqa     ymm1, ymm0                          ; Copy ymm0 into ymm1.
-        vmovdqa     ymm3, ymm2                          ; Copy ymm2 into ymm3.
+Cha50:  vmovntdqa       ymm0, ymmword ptr [rdx]     ; Load 32 bytes into ymm0.
+        ;vmovntdqa   ymm2, ymmword ptr [rdx+20h]    ; Load bytes 33-64.
+        ;add         rdx, 32                        ; Increment pointer.
+        ;prefetchnta [rdx+32]                       ; Prefetch next cache line.
+        ;vextracti128    xmm0, ymm0, 0               ; Copy  0-15 bytes to xmm1.
+        vextracti128    xmm2, ymm0, 1               ; Copy 16-31 bytes to xmm2.
+        vmovdqa         xmm1, xmm0                  ; Duplicate xmm0 into xmm1.
+        vmovdqa         xmm3, xmm2                  ; Duplicate xmm2 into xmm3.
+        add             rdx, 32                     ; Increment pointer.
 
 ;
-; Process bytes 0-31, registers xmm0 and xmm1.
+; Process bytes 0-15, registers xmm0 and xmm1.
 ;
 
         vpextrb     r10, xmm0, 0                        ; Extract byte 0.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 1                        ; Extract byte 1.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 2                        ; Extract byte 2.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 3                        ; Extract byte 3.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 4                        ; Extract byte 4.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 5                        ; Extract byte 5.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 6                        ; Extract byte 6.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 7                        ; Extract byte 7.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 8                        ; Extract byte 8.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 9                        ; Extract byte 9.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 10                       ; Extract byte 10.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 11                       ; Extract byte 11.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 12                       ; Extract byte 12.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 13                       ; Extract byte 13.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
         vpextrb     r10, xmm0, 14                       ; Extract byte 14.
         add         dword ptr [r8 + r10 * 4], 1         ; Update count.
 
         vpextrb     r11, xmm1, 15                       ; Extract byte 15.
-        add         dword ptr [r8 + r11 * 4], 1         ; Update count.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
 
+;
+; Continue processing the second set of 16 bytes (16-31) via xmm2 and xmm3.
+;
+
+        vpextrb     r10, xmm2, 0                        ; Extract byte 16.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 1                        ; Extract byte 17.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 2                        ; Extract byte 18.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 3                        ; Extract byte 19.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 4                        ; Extract byte 20.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 5                        ; Extract byte 21.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 6                        ; Extract byte 22.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 7                        ; Extract byte 23.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 8                        ; Extract byte 24.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 9                        ; Extract byte 25.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 10                       ; Extract byte 26.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 11                       ; Extract byte 27.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 12                       ; Extract byte 28.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 13                       ; Extract byte 29.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+        vpextrb     r10, xmm2, 14                       ; Extract byte 30.
+        add         dword ptr [r8 + r10 * 4], 1         ; Update count.
+
+        vpextrb     r11, xmm3, 15                       ; Extract byte 31.
+        add         dword ptr [r9 + r11 * 4], 1         ; Update count.
+
+;
+; End of loop.  Update loop counter and determine if we're finished.
+;
+
+        sub         ecx, 1                              ; Decrement counter.
+        jnz         Cha50                               ; Continue loop if != 0.
+
+;
+; We've finished creating the histogram.  Time to merge the two temporary
+; histograms into the final one.  Initialize our counter (ecx) to 16.
+;
+
+        mov         ecx, 16                             ; Initialize counter.
+        ;jmp         Cha75
+
+        align 16
+
+Cha75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
+        vmovntdqa   ymm1, ymmword ptr [r8+rax+20h]  ; Load 1st histo 32-63.
+        vmovntdqa   ymm2, ymmword ptr [r9+rax]      ; Load 2nd histo  0-31.
+        vmovntdqa   ymm3, ymmword ptr [r9+rax+20h]  ; Load 2nd histo 32-63.
+
+        vpaddd      ymm4, ymm0, ymm2                ; Add  0-31 counts.
+        vpaddd      ymm5, ymm1, ymm3                ; Add 32-63 counts.
+
+        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save first 32 bytes.
+        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save second 32 bytes.
+
+        add         rax, 40h                        ; Advance to next 64 bytes.
+        sub         ecx, 1                          ; Decrement loop counter.
+        jnz         short Cha75                     ; Continue if != 0.
+
+        jmp         Cha98
+
+        align 16
+
+Cha80:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 32 bytes into ymm0.
+        vmovntdqa   ymm1, ymmword ptr [r8+rax]      ; Load 32 bytes into ymm1.
+        vpaddd      ymm2, ymm0, ymm1                ; Add counts together.
+
+        vmovntdqa   ymm3, ymmword ptr [r8+rax+20h]  ; Load next 32 bytes.
+        vmovntdqa   ymm4, ymmword ptr [r9+rax+20h]  ; Load next 32 bytes.
+        vpaddd      ymm5, ymm3, ymm4                ; Add counts together.
+
+        vmovntdq    ymmword ptr [r8+rax], ymm2      ; Save first 32 bytes.
+        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save second 32 bytes.
+
+        add         rax, 40h                        ; Advance to next 64 bytes.
+        sub         ecx, 1                          ; Decrement loop counter.
+        jnz         short Cha75                     ; Continue if != 0.
+
+        align 16
+Cha85:  movdqa  xmm0, xmmword ptr [r8+rax]          ; Load 16 bytes into xmm0.
+        movdqa  xmm1, xmmword ptr [r8+rax+16]       ; Load 16 bytes into xmm1.
+        paddd   xmm0, xmmword ptr [r9+rax]          ; Add counts from 2nd hist.
+        paddd   xmm1, xmmword ptr [r9+rax+16]       ; Add counts from 2nd hist.
+        movdqa  xmmword ptr [r8+rax], xmm0          ; Save 1st 16 bytes.
+        movdqa  xmmword ptr [r8+rax+16], xmm1       ; Save 2nd 16 bytes.
+        add     rax, 32
+        sub     ecx, 1
+        jnz     short Cha85
+
+        align 16
+Cha87:  movdqa  xmm0, xmmword ptr [r8+rax]          ; Load 16 bytes into xmm0.
+        movdqa  xmm1, xmmword ptr [r8+rax+16]       ; Load 16 bytes into xmm1.
+        movdqa  xmm2, xmmword ptr [r9+rax]          ; Load 2nd  0-15 bytes.
+        movdqa  xmm3, xmmword ptr [r9+rax+16]       ; Load 2nd 16-31 bytes.
+        vpaddd  xmm4, xmm0, xmm2
+        vpaddd  xmm5, xmm1, xmm3
+        movdqa  xmmword ptr [r8+rax], xmm4
+        movdqa  xmmword ptr [r8+rax+16], xmm5
+        add     rax, 32
+        sub     ecx, 1
+        jnz     short Cha87
 
 ;
 ; Indicate success and return.
 ;
 
-        add rax, 1
+Cha98:  mov rax, 1
 
 Cha99:  ret
 
-        NESTED_END CreateHistogramAvx2AlignedAsm, _TEXT$00
+        LEAF_END CreateHistogramAvx2AlignedAsm, _TEXT$00
 
 ;++
 ;
