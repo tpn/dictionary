@@ -490,6 +490,157 @@ namespace TestDictionary
             Assert::IsTrue(Comparison == GenericEqual);
         }
 
+        TEST_METHOD(CreateHistogramAsm)
+        {
+            PBYTE Buffer;
+            ULONG BufferSize = 1 << 16; // 64 KB
+            LONG_STRING String;
+            BOOLEAN Result;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Assert::IsTrue(
+                MakeRandomString(Rtl,
+                                 Allocator,
+                                 BufferSize,
+                                 &Buffer)
+            );
+
+            String.Length = 64;
+            String.Hash = 0;
+            String.Buffer = Buffer;
+
+            CopyMemory(String.Buffer, (PVOID)QuickLazyString.Buffer, 64);
+            String.Buffer[64] = '\0';
+
+            Assert::IsTrue(Api->CreateHistogram(&String, &HistogramA));
+            Assert::IsTrue(
+                Api->CreateHistogramAvx2C(&String,
+                                          &HistogramB.Histogram1,
+                                          &HistogramB.Histogram2)
+            );
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+            //
+            // CreateHistogramAvx2AlignedCV4
+            //
+
+            ZeroStruct(HistogramB);
+
+            Assert::IsTrue(
+                Api->CreateHistogramAvx2AlignedCV4(&String,
+                                                   &HistogramB)
+            );
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+            //
+            // CreateHistogramAvx2AlignedAsm
+            //
+
+            ZeroStruct(HistogramB);
+
+            Result = Api->CreateHistogramAvx2AlignedAsm(&String,
+                                                        &HistogramB);
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+
+            Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+        }
+
+        TEST_METHOD(CreateHistogram3LongStringAllMethods)
+        {
+            PBYTE Buffer;
+            ULONG BufferSize = 1 << 16; // 64 KB
+            LONG_STRING String;
+            BOOLEAN Result;
+            CHARACTER_HISTOGRAM HistogramA;
+            CHARACTER_HISTOGRAM_V4 HistogramB;
+            PCHARACTER_HISTOGRAM Histogram1;
+            PCHARACTER_HISTOGRAM Histogram2;
+            RTL_GENERIC_COMPARE_RESULTS Comparison;
+
+            ZeroStruct(HistogramA);
+            ZeroStruct(HistogramB);
+
+            Histogram1 = &HistogramA;
+            Histogram2 = &HistogramB.Histogram1;
+
+            Assert::IsTrue(
+                MakeRandomString(Rtl,
+                                 Allocator,
+                                 BufferSize,
+                                 &Buffer)
+            );
+
+            String.Length = BufferSize;
+            String.Hash = 0;
+            String.Buffer = Buffer;
+
+            Assert::IsTrue(Api->CreateHistogram(&String, &HistogramA));
+            Assert::IsTrue(
+                Api->CreateHistogramAvx2C(&String,
+                                          &HistogramB.Histogram1,
+                                          &HistogramB.Histogram2)
+            );
+
+            //
+            // CreateHistogramAvx2AlignedCV4
+            //
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            ZeroStruct(HistogramB);
+
+            Assert::IsTrue(
+                Api->CreateHistogramAvx2AlignedCV4(&String,
+                                                   &HistogramB)
+            );
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+            //
+            // CreateHistogramAvx2AlignedAsm
+            //
+
+            ZeroStruct(HistogramB);
+
+            Result = Api->CreateHistogramAvx2AlignedAsm(&String,
+                                                        &HistogramB);
+
+            Comparison = Api->CompareHistograms(Histogram1,
+                                                Histogram2);
+
+            Assert::IsTrue(Comparison == GenericEqual);
+
+
+            Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+        }
+
         TEST_METHOD(CreateHistogram16MBString)
         {
             PBYTE Buffer;

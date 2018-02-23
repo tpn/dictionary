@@ -988,7 +988,7 @@ Scratch5(
             ZeroStruct(HistogramA);
             START_TIMESTAMP(1);
             Result = Api->CreateHistogram(&String, &HistogramA);
-            END_CYCLES(1);
+            END_TIMESTAMP(1);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(1, Length, Iterations);
@@ -1002,7 +1002,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2C(&String,
                                                &HistogramB.Histogram1,
                                                &HistogramB.Histogram2);
-            END_CYCLES(2);
+            END_TIMESTAMP(2);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(2, Length, Iterations);
@@ -1014,7 +1014,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2AlignedC(&String,
                                                       &HistogramB.Histogram1,
                                                       &HistogramB.Histogram2);
-            END_CYCLES(3);
+            END_TIMESTAMP(3);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(3, Length, Iterations);
@@ -1026,7 +1026,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2AlignedC32(&String,
                                                         &HistogramB.Histogram1,
                                                         &HistogramB.Histogram2);
-            END_CYCLES(4);
+            END_TIMESTAMP(4);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(4, Length, Iterations);
@@ -1037,7 +1037,7 @@ Scratch5(
             START_TIMESTAMP(5);
             Result = Api->CreateHistogramAvx2AlignedCV4(&String,
                                                         &HistogramB);
-            END_CYCLES(5);
+            END_TIMESTAMP(5);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(5, Length, Iterations);
@@ -1048,7 +1048,7 @@ Scratch5(
             START_TIMESTAMP(6);
             Result = Api->CreateHistogramAvx2AlignedAsm(&String,
                                                         &HistogramB);
-            END_CYCLES(6);
+            END_TIMESTAMP(6);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(6, Length, Iterations);

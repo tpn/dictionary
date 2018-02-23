@@ -161,10 +161,6 @@ Histogram typedef CHARACTER_HISTOGRAM_V4
 ;
 
 Cha50:  vmovntdqa       ymm0, ymmword ptr [rdx]     ; Load 32 bytes into ymm0.
-        ;vmovntdqa   ymm2, ymmword ptr [rdx+20h]    ; Load bytes 33-64.
-        ;add         rdx, 32                        ; Increment pointer.
-        ;prefetchnta [rdx+32]                       ; Prefetch next cache line.
-        ;vextracti128    xmm0, ymm0, 0               ; Copy  0-15 bytes to xmm1.
         vextracti128    xmm2, ymm0, 1               ; Copy 16-31 bytes to xmm2.
         vmovdqa         xmm1, xmm0                  ; Duplicate xmm0 into xmm1.
         vmovdqa         xmm3, xmm2                  ; Duplicate xmm2 into xmm3.
@@ -282,12 +278,11 @@ Cha50:  vmovntdqa       ymm0, ymmword ptr [rdx]     ; Load 32 bytes into ymm0.
         jnz         Cha50                               ; Continue loop if != 0.
 
 ;
-; We've finished creating the histogram.  Time to merge the two temporary
-; histograms into the final one.  Initialize our counter (ecx) to 16.
+; We've finished creating the histogram.  Merge the two histograms 64 bytes at
+; a time using YMM registers.
 ;
 
         mov         ecx, 16                             ; Initialize counter.
-        ;jmp         Cha75
 
         align 16
 
@@ -299,55 +294,12 @@ Cha75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
         vpaddd      ymm4, ymm0, ymm2                ; Add  0-31 counts.
         vpaddd      ymm5, ymm1, ymm3                ; Add 32-63 counts.
 
-        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save first 32 bytes.
-        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save second 32 bytes.
+        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save counts for  0-31.
+        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save counts for 32-63.
 
         add         rax, 40h                        ; Advance to next 64 bytes.
         sub         ecx, 1                          ; Decrement loop counter.
         jnz         short Cha75                     ; Continue if != 0.
-
-        jmp         Cha98
-
-        align 16
-
-Cha80:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 32 bytes into ymm0.
-        vmovntdqa   ymm1, ymmword ptr [r8+rax]      ; Load 32 bytes into ymm1.
-        vpaddd      ymm2, ymm0, ymm1                ; Add counts together.
-
-        vmovntdqa   ymm3, ymmword ptr [r8+rax+20h]  ; Load next 32 bytes.
-        vmovntdqa   ymm4, ymmword ptr [r9+rax+20h]  ; Load next 32 bytes.
-        vpaddd      ymm5, ymm3, ymm4                ; Add counts together.
-
-        vmovntdq    ymmword ptr [r8+rax], ymm2      ; Save first 32 bytes.
-        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save second 32 bytes.
-
-        add         rax, 40h                        ; Advance to next 64 bytes.
-        sub         ecx, 1                          ; Decrement loop counter.
-        jnz         short Cha75                     ; Continue if != 0.
-
-        align 16
-Cha85:  movdqa  xmm0, xmmword ptr [r8+rax]          ; Load 16 bytes into xmm0.
-        movdqa  xmm1, xmmword ptr [r8+rax+16]       ; Load 16 bytes into xmm1.
-        paddd   xmm0, xmmword ptr [r9+rax]          ; Add counts from 2nd hist.
-        paddd   xmm1, xmmword ptr [r9+rax+16]       ; Add counts from 2nd hist.
-        movdqa  xmmword ptr [r8+rax], xmm0          ; Save 1st 16 bytes.
-        movdqa  xmmword ptr [r8+rax+16], xmm1       ; Save 2nd 16 bytes.
-        add     rax, 32
-        sub     ecx, 1
-        jnz     short Cha85
-
-        align 16
-Cha87:  movdqa  xmm0, xmmword ptr [r8+rax]          ; Load 16 bytes into xmm0.
-        movdqa  xmm1, xmmword ptr [r8+rax+16]       ; Load 16 bytes into xmm1.
-        movdqa  xmm2, xmmword ptr [r9+rax]          ; Load 2nd  0-15 bytes.
-        movdqa  xmm3, xmmword ptr [r9+rax+16]       ; Load 2nd 16-31 bytes.
-        vpaddd  xmm4, xmm0, xmm2
-        vpaddd  xmm5, xmm1, xmm3
-        movdqa  xmmword ptr [r8+rax], xmm4
-        movdqa  xmmword ptr [r8+rax+16], xmm5
-        add     rax, 32
-        sub     ecx, 1
-        jnz     short Cha87
 
 ;
 ; Indicate success and return.
