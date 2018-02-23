@@ -413,6 +413,16 @@ BOOLEAN
     );
 typedef CREATE_HISTOGRAM2 *PCREATE_HISTOGRAM2;
 
+typedef
+_Success_(return != 0)
+BOOLEAN
+(NTAPI CREATE_HISTOGRAM_V4)(
+    _In_ PCLONG_STRING String,
+    _Inout_updates_bytes_(sizeof(*Histogram))
+        PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+typedef CREATE_HISTOGRAM_V4 *PCREATE_HISTOGRAM_V4;
+
 //
 // Define the main dictionary API structure.
 //
@@ -454,7 +464,9 @@ typedef struct _DICTIONARY_FUNCTIONS {
     PCREATE_HISTOGRAM CreateHistogram;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2C;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
-    PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedAsm;
+    PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC32;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedCV4;
 
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
@@ -496,7 +508,9 @@ LoadDictionaryModule(
         "CreateHistogram",
         "CreateHistogramAvx2C",
         "CreateHistogramAvx2AlignedC",
+        "CreateHistogramAvx2AlignedC32",
         "CreateHistogramAvx2AlignedAsm",
+        "CreateHistogramAvx2AlignedCV4",
 
     };
 

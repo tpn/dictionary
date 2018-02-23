@@ -14,6 +14,8 @@ EXPORTS
     CreateHistogram
     CreateHistogramAvx2C
     CreateHistogramAvx2AlignedC
+    CreateHistogramAvx2AlignedCV4
+    CreateHistogramAvx2AlignedC32
     CreateHistogramAvx2AlignedAsm
     CompareHistograms=CompareHistogramsAlignedAvx2
     CompareHistogramsAlignedAvx2

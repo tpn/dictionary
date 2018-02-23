@@ -530,6 +530,7 @@ Scratch3(
     )
 {
     BOOL Success;
+    ULONG OldCodePage;
     PBYTE Buffer;
     ULARGE_INTEGER BytesToWrite;
     LONG_STRING String;
@@ -567,11 +568,16 @@ Scratch3(
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     ASSERT(OutputHandle);
 
-    Success = WriteConsoleW(OutputHandle, TempW.Buffer, TempW.Length >> 1, &CharsWritten, NULL);
+    Success = WriteConsoleW(OutputHandle,
+                            TempW.Buffer,
+                            TempW.Length >> 1,
+                            &CharsWritten, NULL);
 
+    OldCodePage = GetConsoleCP();
     ASSERT(SetConsoleCP(20127));
 
-    Success = WriteConsoleA(OutputHandle, TempA.Buffer, TempA.Length, &CharsWritten, NULL);
+    Success = WriteConsoleA(OutputHandle,
+                            TempA.Buffer, TempA.Length, &CharsWritten, NULL);
 
     ASSERT(
         MakeRandomString(Rtl,
@@ -646,6 +652,8 @@ Scratch3(
     OUTPUT_RAW(" us)\r\n");
     OUTPUT_FLUSH2();
 
+    ASSERT(SetConsoleCP(OldCodePage));
+
 }
 
 typedef struct _TIMESTAMP {
@@ -654,7 +662,7 @@ typedef struct _TIMESTAMP {
     STRING Name;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
-    LARGE_INTEGER Elapsed;
+    ULARGE_INTEGER Elapsed;
     ULARGE_INTEGER Total;
     ULARGE_INTEGER Nanoseconds;
     ULARGE_INTEGER Minimum;
@@ -670,9 +678,9 @@ typedef TIMESTAMP *PTIMESTAMP;
     Timestamp##Idx##.Name.Buffer = Namex;                \
     Timestamp##Idx##.Minimum.QuadPart = (ULONGLONG)-1
 
-#define RESET_TIMESTAMP(Id)                            \
-    Timestamp##Id##.Count = 0; \
-    Timestamp##Id##.Total.QuadPart = 0; \
+#define RESET_TIMESTAMP(Id)                           \
+    Timestamp##Id##.Count = 0;                        \
+    Timestamp##Id##.Total.QuadPart = 0;               \
     Timestamp##Id##.Minimum.QuadPart = (ULONGLONG)-1; \
     Timestamp##Id##.Maximum.QuadPart = 0
 
@@ -705,6 +713,31 @@ typedef TIMESTAMP *PTIMESTAMP;
             );                                                              \
     }
 
+#define END_CYCLES(Id)                                                  \
+    QueryPerformanceCounter(&Timestamp##Id##.End);                      \
+    Timestamp##Id##.Elapsed.QuadPart = (                                \
+        Timestamp##Id##.End.QuadPart -                                  \
+        Timestamp##Id##.Start.QuadPart                                  \
+    );                                                                  \
+    Timestamp##Id##.Nanoseconds.QuadPart = (                            \
+        Timestamp##Id##.Elapsed.QuadPart *                              \
+        TIMESTAMP_TO_NANOSECONDS                                        \
+    );                                                                  \
+    Timestamp##Id##.Nanoseconds.QuadPart /= Frequency.QuadPart;         \
+    Timestamp##Id##.Total.QuadPart += Timestamp##Id##.Elapsed.QuadPart; \
+    if (Timestamp##Id##.Minimum.QuadPart >                              \
+        Timestamp##Id##.Elapsed.QuadPart) {                             \
+            Timestamp##Id##.Minimum.QuadPart = (                        \
+                Timestamp##Id##.Elapsed.QuadPart                        \
+            );                                                          \
+    }                                                                   \
+    if (Timestamp##Id##.Maximum.QuadPart <                              \
+        Timestamp##Id##.Elapsed.QuadPart) {                             \
+            Timestamp##Id##.Maximum.QuadPart = (                        \
+                Timestamp##Id##.Elapsed.QuadPart                        \
+            );                                                          \
+    }
+
 #define FINISH_TIMESTAMP(Id, Length, Iterations)  \
     OUTPUT_STRING(&Timestamp##Id##.Name);         \
     OUTPUT_SEP();                                 \
@@ -727,6 +760,7 @@ Scratch4(
     BOOL Success;
     ULONG Index;
     ULONG Iterations;
+    ULONG OldCodePage;
     PBYTE Buffer;
     ULARGE_INTEGER BytesToWrite;
     LONG_STRING String;
@@ -768,6 +802,8 @@ Scratch4(
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     ASSERT(OutputHandle);
 
+    OldCodePage = GetConsoleCP();
+
     ASSERT(SetConsoleCP(20127));
 
     ASSERT(
@@ -794,10 +830,12 @@ Scratch4(
 
     OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
 
-    Iterations = 100000;
+    Iterations = 1000;
     Length = Lengths;
 
     do {
+        String.Length = *Length;
+
         RESET_TIMESTAMP(1);
         for (Index = 0; Index < Iterations; Index++) {
             START_TIMESTAMP(1);
@@ -844,6 +882,185 @@ Scratch4(
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
 
     OUTPUT_FLUSH2();
+
+    ASSERT(SetConsoleCP(OldCodePage));
+
+}
+
+VOID
+Scratch5(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PDICTIONARY_FUNCTIONS Api
+    )
+{
+    BOOL Success;
+    ULONG Index;
+    ULONG Iterations;
+    ULONG OldCodePage;
+    PBYTE Buffer;
+    ULARGE_INTEGER BytesToWrite;
+    LONG_STRING String;
+    BOOLEAN Result;
+    CHARACTER_HISTOGRAM HistogramA;
+    CHARACTER_HISTOGRAM_V4 HistogramB;
+    HANDLE OutputHandle;
+    LARGE_INTEGER Frequency;
+    TIMESTAMP Timestamp1;
+    TIMESTAMP Timestamp2;
+    TIMESTAMP Timestamp3;
+    TIMESTAMP Timestamp4;
+    TIMESTAMP Timestamp5;
+    TIMESTAMP Timestamp6;
+    ULONG BufferSize = 1 << 23;
+    ULONGLONG OutputBufferSize;
+    //ULONG BytesWritten;
+    ULONG CharsWritten;
+    PCHAR Output;
+    PCHAR OutputBuffer;
+    ULONG Lengths[] = {
+        64,
+        128,
+        192,
+        256,
+        384,
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+        16384,
+        32768,
+        65536,
+        1 << 17,
+        1 << 18,
+        1 << 19,
+        0
+    };
+    PULONG Length;
+
+    ZeroStruct(HistogramA);
+    ZeroStruct(HistogramB);
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ASSERT(OutputHandle);
+
+    OldCodePage = GetConsoleCP();
+
+    ASSERT(SetConsoleCP(20127));
+
+    ASSERT(
+        MakeRandomString(Rtl,
+                         Allocator,
+                         BufferSize,
+                         &Buffer)
+    );
+
+    Success = CreateBuffer(Rtl, NULL, 1, 0, &OutputBufferSize, &OutputBuffer);
+    ASSERT(Success);
+
+    Output = OutputBuffer;
+
+    String.Length = BufferSize;
+    String.Hash = 0;
+    String.Buffer = Buffer;
+
+    QueryPerformanceFrequency(&Frequency);
+
+
+    INIT_TIMESTAMP(1, "CreateHistogram              ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx2C         ");
+    INIT_TIMESTAMP(3, "CreateHistogramAvx2AlignedC  ");
+    INIT_TIMESTAMP(4, "CreateHistogramAvx2AlignedC32");
+    INIT_TIMESTAMP(5, "CreateHistogramAvx2AlignedCV4");
+    INIT_TIMESTAMP(6, "CreateHistogramAvx2AlignedAsm");
+
+    OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
+
+    Iterations = 5000;
+    Length = Lengths;
+
+    do {
+        String.Length = *Length;
+
+        RESET_TIMESTAMP(1);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramA);
+            START_TIMESTAMP(1);
+            Result = Api->CreateHistogram(&String, &HistogramA);
+            END_CYCLES(1);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(1, Length, Iterations);
+
+        OUTPUT_FLUSH2();
+
+        RESET_TIMESTAMP(2);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(2);
+            Result = Api->CreateHistogramAvx2C(&String,
+                                               &HistogramB.Histogram1,
+                                               &HistogramB.Histogram2);
+            END_CYCLES(2);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(2, Length, Iterations);
+
+        RESET_TIMESTAMP(3);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(3);
+            Result = Api->CreateHistogramAvx2AlignedC(&String,
+                                                      &HistogramB.Histogram1,
+                                                      &HistogramB.Histogram2);
+            END_CYCLES(3);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(3, Length, Iterations);
+
+        RESET_TIMESTAMP(4);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(4);
+            Result = Api->CreateHistogramAvx2AlignedC32(&String,
+                                                        &HistogramB.Histogram1,
+                                                        &HistogramB.Histogram2);
+            END_CYCLES(4);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(4, Length, Iterations);
+
+        RESET_TIMESTAMP(5);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(5);
+            Result = Api->CreateHistogramAvx2AlignedCV4(&String,
+                                                        &HistogramB);
+            END_CYCLES(5);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(5, Length, Iterations);
+
+        RESET_TIMESTAMP(6);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(6);
+            Result = Api->CreateHistogramAvx2AlignedAsm(&String,
+                                                        &HistogramB);
+            END_CYCLES(6);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(6, Length, Iterations);
+
+        OUTPUT_FLUSH2();
+    } while (*(++Length));
+
+    Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+    OUTPUT_FLUSH2();
+
+    ASSERT(SetConsoleCP(OldCodePage));
 
 }
 
@@ -925,7 +1142,8 @@ mainCRTStartup()
 
     //Scratch2(Rtl, Allocator, Api);
 
-    Scratch4(Rtl, Allocator, Api);
+    //Scratch4(Rtl, Allocator, Api);
+    Scratch5(Rtl, Allocator, Api);
 
 Error:
 
