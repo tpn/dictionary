@@ -18,6 +18,12 @@
 include ksamd64.inc
 
 ;
+; Define constants.
+;
+
+OP_NEQ equ 4
+
+;
 ; Define the LONG_STRING structure used to encapsulate string information.
 ;
 
@@ -310,6 +316,196 @@ Cha98:  mov rax, 1
 Cha99:  ret
 
         LEAF_END CreateHistogramAvx2AlignedAsm, _TEXT$00
+
+;++
+;
+; BOOLEAN
+; CreateHistogramAvx512AlignedAsm(
+;     _In_ PCLONG_STRING String,
+;     _Inout_updates_bytes_(sizeof(*Histogram))
+;         PCHARACTER_HISTOGRAM_V4 Histogram
+;     );
+;
+; Routine Description:
+;
+;   This routine creates a histogram for a given string.
+;
+; Arguments:
+;
+;   String (rcx) - Supplies a pointer to a LONG_STRING structure that contains
+;       the string for which a histogram is to be created.
+;
+;   Histogram (rdx) - Supplies an address that receives the histogram for the
+;       given input string.
+;
+; Return Value:
+;
+;   TRUE on success, FALSE on failure.
+;
+;--
+
+        LEAF_ENTRY CreateHistogramAvx512AlignedAsm, _TEXT$00
+
+;
+; Clear return value (Success = FALSE).
+;
+
+        xor     rax, rax                                ; Clear rax.
+
+;
+; Validate parameters.
+;
+
+        test    rcx, rcx                                ; Is rcx NULL?
+        jz      Chb99                                   ; Yes, abort.
+        test    rdx, rdx                                ; Is rdx NULL?
+        jz      Chb99                                   ; Yes, abort.
+
+;
+; Verify the string is at least 64 bytes long.
+;
+        mov     r9, 64                                  ; Initialize r9 to 64.
+        cmp     String.Length[rcx], r9d                 ; Compare Length to 64.
+        jl      Chb99                                   ; String is too short.
+
+;
+; Ensure the incoming string and histogram buffers are aligned to 32-byte
+; boundaries.
+;
+
+        mov     r9, 31                                  ; Initialize r9 to 31.
+        test    String.Buffer[rcx], r9                  ; Is string aligned?
+        jnz     Chb99                                   ; No, abort.
+
+;
+; Initialize loop variables.
+;
+;   rcx - Counter.
+;
+;   rdx - Base string buffer.
+;
+;   r8  - Base address of first histogram buffer.
+;
+;   r9  - Base address of second histogram buffer.
+;
+;   r10 - Byte counter.
+;
+;   r11 - Byte counter.
+;
+
+        mov     r8, rdx                             ; Load 1st histo buffer.
+        lea     r9, Histogram.Histogram2[r8]        ; Load 2nd histo buffer.
+        mov     rdx, String.Buffer[rcx]             ; Load string buffer.
+        mov     ecx, String.Length[rcx]             ; Load string length.
+        shr     ecx, 6                              ; Divide by 64 to get loop
+                                                    ; iterations.
+
+
+        mov             rax, 1
+        movd            xmm0, rax
+        vpbroadcastb    zmm4, xmm0
+
+        mov             eax, -1
+        movd            xmm0, rax
+        vpbroadcastd    zmm5, xmm0
+
+        mov             rax, 31
+        movd            xmm0, rax
+        vpbroadcastd    zmm6, xmm0
+
+        mov             rax, 255
+        movd            xmm0, rax
+        vpbroadcastb    zmm7, xmm0
+
+        xor             rax, rax
+        kxnorw          k2, k2, k2
+
+
+;
+; Top of the histogram loop.
+;
+
+        align 16
+
+;
+; Load the first 64 bytes into ymm0.  Duplicate the lower 16 bytes in xmm0 and
+; xmm1, then extract the high 16 bytes into xmm2 and xmm3.
+;
+
+Chb50:  vmovntdqa       zmm3, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
+        vpconflictd     zmm0, zmm3
+        vpandd          zmm8, zmm7, ymmword ptr [rdx]
+        kxnorw          k1, k1, k1
+        vmovaps         zmm2, zmm4
+        vpxord          zmm1, zmm1, zmm1
+        vpgatherdd      zmm1 {k1}, [r8+zmm9*4]
+        vptestmd        k1, zmm0, zmm0
+        kortestw        k1, k1
+        je              Chb60
+
+        vplzcntd        zmm0, zmm0
+        vpsubd          zmm0, zmm6, zmm0
+
+;
+; Handle conflicts.
+;
+
+Chb55:  vpermd          zmm8 {k1} {z}, zmm2, zmm0
+        vpermd          zmm0 {k1},     zmm0, zmm0
+        vpaddd          zmm2 {k1},     zmm2, zmm8
+        vpcmpd          k1 {k2}, zmm5, zmm0, OP_NEQ
+        kortestw        k1, k1
+        jne             Chb55
+
+;
+; No conflicts; update counts.
+;
+
+Chb60:  vpaddd          zmm0, zmm2, zmm1
+        kxnorw          k1, k1, k1
+        vpscatterdd     [r8+zmm3*4]{k1}, zmm0
+
+;
+; End of loop.  Update loop counter and determine if we're finished.
+;
+
+        sub         ecx, 1                              ; Decrement counter.
+        jnz         Chb50                               ; Continue loop if != 0.
+
+;
+; We've finished creating the histogram.  Merge the two histograms 64 bytes at
+; a time using YMM registers.
+;
+
+        mov         ecx, 16                             ; Initialize counter.
+
+        align 16
+
+Chb75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
+        vmovntdqa   ymm1, ymmword ptr [r8+rax+20h]  ; Load 1st histo 32-63.
+        vmovntdqa   ymm2, ymmword ptr [r9+rax]      ; Load 2nd histo  0-31.
+        vmovntdqa   ymm3, ymmword ptr [r9+rax+20h]  ; Load 2nd histo 32-63.
+
+        vpaddd      ymm4, ymm0, ymm2                ; Add  0-31 counts.
+        vpaddd      ymm5, ymm1, ymm3                ; Add 32-63 counts.
+
+        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save counts for  0-31.
+        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save counts for 32-63.
+
+        add         rax, 40h                        ; Advance to next 64 bytes.
+        sub         ecx, 1                          ; Decrement loop counter.
+        jnz         short Chb75                     ; Continue if != 0.
+
+;
+; Indicate success and return.
+;
+
+        mov rax, 1
+
+Chb99:  ret
+
+        LEAF_END CreateHistogramAvx512AlignedAsm, _TEXT$00
+
 
 ;++
 ;

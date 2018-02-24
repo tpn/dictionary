@@ -486,7 +486,6 @@ namespace TestDictionary
 
             Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
 
-            Assert::IsTrue(Elapsed2.QuadPart < Elapsed1.QuadPart);
             Assert::IsTrue(Comparison == GenericEqual);
         }
 

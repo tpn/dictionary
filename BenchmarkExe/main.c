@@ -28,6 +28,10 @@ HMODULE GlobalModule = 0;
 #define TIMESTAMP_TO_MICROSECONDS 1000000ULL
 #define TIMESTAMP_TO_NANOSECONDS  1000000000ULL
 
+static const PCBYTE QuickLazy = \
+    "The quick brown fox jumps over the lazy dog and then "
+    "the lazy dog jumps over the quick brown fox.";
+
 #ifndef ASSERT
 #define ASSERT(Condition) \
     if (!(Condition)) {   \
@@ -1064,6 +1068,134 @@ Scratch5(
 
 }
 
+VOID
+Scratch6(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PDICTIONARY_FUNCTIONS Api
+    )
+{
+    BOOL Success;
+    ULONG Index;
+    ULONG Iterations;
+    ULONG OldCodePage;
+    PBYTE Buffer;
+    ULARGE_INTEGER BytesToWrite;
+    LONG_STRING String;
+    BOOLEAN Result;
+    CHARACTER_HISTOGRAM HistogramA;
+    CHARACTER_HISTOGRAM_V4 HistogramB;
+    HANDLE OutputHandle;
+    LARGE_INTEGER Frequency;
+    TIMESTAMP Timestamp1;
+    TIMESTAMP Timestamp2;
+    ULONG BufferSize = 1 << 23;
+    ULONGLONG OutputBufferSize;
+    //ULONG BytesWritten;
+    ULONG CharsWritten;
+    PCHAR Output;
+    PCHAR OutputBuffer;
+    ULONG Lengths[] = {
+        64,
+        128,
+        192,
+        256,
+        384,
+        512,
+        1024,
+        2048,
+        4096,
+        0,
+        16384,
+        32768,
+        65536,
+        1 << 17,
+        1 << 18,
+        1 << 19,
+        0
+    };
+    PULONG Length;
+
+    ZeroStruct(HistogramA);
+    ZeroStruct(HistogramB);
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ASSERT(OutputHandle);
+
+    OldCodePage = GetConsoleCP();
+
+    ASSERT(SetConsoleCP(20127));
+
+    ASSERT(
+        MakeRandomString(Rtl,
+                         Allocator,
+                         BufferSize,
+                         &Buffer)
+    );
+
+    Success = CreateBuffer(Rtl, NULL, 1, 0, &OutputBufferSize, &OutputBuffer);
+    ASSERT(Success);
+
+    Output = OutputBuffer;
+
+    String.Length = BufferSize;
+    String.Hash = 0;
+    String.Buffer = Buffer;
+
+    QueryPerformanceFrequency(&Frequency);
+
+    String.Length = 64;
+    String.Buffer = (PBYTE)QuickLazy;
+    Result = Api->CreateHistogramAvx512AlignedAsm(&String,
+                                                  &HistogramB);
+
+
+    INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm  ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm");
+
+    OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
+
+    Iterations = 1;
+    Length = Lengths;
+
+    do {
+        String.Length = *Length;
+
+        RESET_TIMESTAMP(1);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(1);
+            Result = Api->CreateHistogramAvx2AlignedAsm(&String,
+                                                        &HistogramB);
+            END_TIMESTAMP(1);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(1, Length, Iterations);
+
+        RESET_TIMESTAMP(2);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(2);
+            Result = Api->CreateHistogramAvx512AlignedAsm(&String,
+                                                          &HistogramB);
+            END_TIMESTAMP(2);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(2, Length, Iterations);
+
+
+        OUTPUT_FLUSH2();
+    } while (*(++Length));
+
+    Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+    OUTPUT_FLUSH2();
+
+    ASSERT(SetConsoleCP(OldCodePage));
+
+}
+
+
 
 
 DECLSPEC_NORETURN
@@ -1143,7 +1275,7 @@ mainCRTStartup()
     //Scratch2(Rtl, Allocator, Api);
 
     //Scratch4(Rtl, Allocator, Api);
-    Scratch5(Rtl, Allocator, Api);
+    Scratch6(Rtl, Allocator, Api);
 
 Error:
 
