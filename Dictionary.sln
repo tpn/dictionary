@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A70C4C43-F7F1-4D59-8478-3DA0797E362C}"
 	ProjectSection(SolutionItems) = preProject
@@ -19,6 +19,12 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestDictionary", "TestDictionary\TestDictionary.vcxproj", "{500B3B07-E505-4566-85FA-8B64843EC684}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BenchmarkExe", "BenchmarkExe\BenchmarkExe.vcxproj", "{C4D67F0A-CD69-42D1-A07A-24B25219A716}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B512054C-A17F-4E70-9AD2-1C79856AC0B1} = {B512054C-A17F-4E70-9AD2-1C79856AC0B1}
+		{A74874AC-5F74-42B8-9E94-4028DE4D1829} = {A74874AC-5F74-42B8-9E94-4028DE4D1829}
+		{A74874AC-5F75-42B8-9E94-4028DE4D1829} = {A74874AC-5F75-42B8-9E94-4028DE4D1829}
+		{91695EDE-DFC2-4364-A959-3C8A0870507A} = {91695EDE-DFC2-4364-A959-3C8A0870507A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Asm", "Asm\Asm.vcxproj", "{A74874AC-5F74-42B8-9E94-4028DE4D1829}"
 EndProject

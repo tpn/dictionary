@@ -57,12 +57,55 @@ PCHARACTER_HISTOGRAM_V4 typedef ptr CHARACTER_HISTOGRAM_V4
 ;
 
 Locals struct
+    Temp dq ?
+
+    ;
+    ; Define non-volatile register storage.
+    ;
+
+    union
+        FirstNvRegister     dq      ?
+        SavedRbp            dq      ?
+    ends
+
+    SavedRbx                dq      ?
+    SavedRdi                dq      ?
+    SavedRsi                dq      ?
+    SavedR12                dq      ?
+    SavedR13                dq      ?
+    SavedR14                dq      ?
+
+    SavedXmm6               XMMWORD { }
+    SavedXmm7               XMMWORD { }
+    SavedXmm8               XMMWORD { }
+    SavedXmm9               XMMWORD { }
+    SavedXmm10              XMMWORD { }
+    SavedXmm11              XMMWORD { }
+    SavedXmm12              XMMWORD { }
+    SavedXmm13              XMMWORD { }
+    SavedXmm14              XMMWORD { }
+    SavedXmm15              XMMWORD { }
+
+    ;
+    ; Stash R15 after the return address to ensure the XMM register space
+    ; is aligned on a 16 byte boundary, as we use movdqa (i.e. aligned move)
+    ; which will fault if we're only 8 byte aligned.
+    ;
+
+    SavedR15                dq      ?
+
     ReturnAddress   dq  ?
     HomeRcx         dq  ?
     HomeRdx         dq  ?
     HomeR8          dq  ?
     HomeR9          dq  ?
 Locals ends
+
+;
+; Exclude the return address onward from the frame calculation size.
+;
+
+LOCALS_SIZE  equ ((sizeof Locals) + (Locals.ReturnAddress - (sizeof Locals)))
 
 ;
 ; Define helper typedefs that are nicer to work with in assembly than their long
@@ -344,7 +387,36 @@ Cha99:  ret
 ;
 ;--
 
-        LEAF_ENTRY CreateHistogramAvx512AlignedAsm, _TEXT$00
+        NESTED_ENTRY CreateHistogramAvx512AlignedAsm, _TEXT$00
+
+;
+; Begin prologue.  Allocate stack space and save non-volatile registers.
+;
+
+        alloc_stack LOCALS_SIZE
+
+        save_reg    rbp, Locals.SavedRbp        ; Save non-volatile rbp.
+        save_reg    rbx, Locals.SavedRbx        ; Save non-volatile rbx.
+        save_reg    rdi, Locals.SavedRdi        ; Save non-volatile rdi.
+        save_reg    rsi, Locals.SavedRsi        ; Save non-volatile rsi.
+        save_reg    r12, Locals.SavedR12        ; Save non-volatile r12.
+        save_reg    r13, Locals.SavedR13        ; Save non-volatile r13.
+        save_reg    r14, Locals.SavedR14        ; Save non-volatile r14.
+        save_reg    r15, Locals.SavedR15        ; Save non-volatile r15.
+
+        save_xmm128 xmm6, Locals.SavedXmm6      ; Save non-volatile xmm6.
+        save_xmm128 xmm7, Locals.SavedXmm7      ; Save non-volatile xmm7.
+        save_xmm128 xmm8, Locals.SavedXmm8      ; Save non-volatile xmm8.
+        save_xmm128 xmm9, Locals.SavedXmm9      ; Save non-volatile xmm9.
+        save_xmm128 xmm10, Locals.SavedXmm10    ; Save non-volatile xmm10.
+        save_xmm128 xmm11, Locals.SavedXmm11    ; Save non-volatile xmm11.
+        save_xmm128 xmm12, Locals.SavedXmm12    ; Save non-volatile xmm12.
+        save_xmm128 xmm13, Locals.SavedXmm13    ; Save non-volatile xmm13.
+        save_xmm128 xmm14, Locals.SavedXmm14    ; Save non-volatile xmm14.
+        save_xmm128 xmm15, Locals.SavedXmm15    ; Save non-volatile xmm15.
+
+        END_PROLOGUE
+
 
 ;
 ; Clear return value (Success = FALSE).
@@ -401,6 +473,54 @@ Cha99:  ret
                                                     ; iterations.
 
 
+        ;xor             rax, rax
+        ;mov             al, 011h
+        ;kmovb           k1,
+
+        mov             rax, 1111111111111111h
+        kmovq           k1, rax
+        vpmovm2b        zmm1, k1
+        vpsubb          zmm21, zmm1, zmm1
+
+        kshiftlq        k2, k1, 1
+        vpmovm2b        zmm2, k2
+        vpsubb          zmm22, zmm2, zmm1
+
+        kshiftlq        k3, k1, 2
+        vpmovm2b        zmm3, k3
+
+        kshiftlq        k4, k1, 3
+        vpmovm2b        zmm4, k4
+
+        jmp             Chb30
+
+        kshiftlb        k4, k4, 1
+        vpmovm2b        zmm2, k4
+
+        kshiftlb        k3, k1, 2
+        kshiftlb        k4, k1, 3
+
+        vpmovm2w        zmm1, k1
+        vpmovm2d        zmm2, k1
+
+        mov             ax, 0ffh
+        kmovd           k2, eax
+        vpmovm2b        zmm3, k2
+        vpmovm2w        zmm4, k2
+        vpmovm2d        zmm5, k2
+
+        ;mov             rdx, rax
+        ;shr             rdx, 1
+        ;not             rdx
+
+        kshiftld        k2, k1, 1
+        kshiftld        k3, k1, 2
+        kshiftld        k4, k1, 3
+
+        knotd           k5, k1
+        knotd           k6, k2
+        knotd           k7, k3
+
         mov             rax, 1
         movd            xmm0, rax
         vpbroadcastb    zmm4, xmm0
@@ -409,7 +529,8 @@ Cha99:  ret
         movd            xmm0, rax
         vpbroadcastd    zmm5, xmm0
 
-        mov             rax, 31
+        mov             ax, 31
+        not             ax
         movd            xmm0, rax
         vpbroadcastd    zmm6, xmm0
 
@@ -419,6 +540,66 @@ Cha99:  ret
 
         xor             rax, rax
         kxnorw          k2, k2, k2
+
+        align 16
+
+Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
+
+
+Chb35:  vpandd          zmm5, zmm1, zmm0
+        vpandd          zmm6, zmm2, zmm0
+        vpandd          zmm7, zmm3, zmm0
+        vpandd          zmm8, zmm4, zmm0
+
+        ;mov             rax, 0001000100010001h
+        mov             rax, 0001000100010001h
+        kmovq           k1, rax
+        vpmovm2b        zmm1, k1
+
+
+        vpermb          zmm20, zmm10, zmm6
+
+        vprord          zmm20, zmm6, 1
+        vprord          zmm21, zmm6, 2
+        vprord          zmm22 {k2}, zmm6, 1
+        vprord          zmm23 {k3}, zmm6, 1
+        vprord          zmm24 {k4}, zmm6, 1
+
+        ;xor             eax, eax
+        ;add             eax, 1
+        ;kmovb           k1, eax
+        ;vpbroadcastmw2d zmm9, k1
+
+        ;vpsrlvd         zmm10, zmm6, zmm0
+        ;vpsrlvd         zmm11, zmm6, zmm0
+
+        ;xor             rax, rax
+        ;add             rax, 1
+
+        vpsrlvd         zmm11, zmm6, zmm1
+
+        vpsravd         zmm10 {k2}, zmm6, zmm2
+        vpsrlvd         zmm11 {k2}, zmm6, zmm2
+        vpsrlvd         zmm12 {k0}, zmm6, zmm2
+        ;vpsravd         zmm11, zmm7, 2
+        ;vpsravd         zmm12, zmm8, 3
+
+        vpconflictd     zmm20, zmm5
+        vpconflictd     zmm21, zmm10
+        vpconflictd     zmm22, zmm11
+        vpconflictd     zmm23, zmm12
+
+        vptestmd        k4, zmm20, zmm20
+        vptestmd        k5, zmm21, zmm21
+        vptestmd        k6, zmm22, zmm22
+        vptestmd        k7, zmm23, zmm23
+
+        vpandd          zmm6 {k2} {z}, zmm1, zmmword ptr [rdx]
+
+        vpandd          zmm1 {k1} {z}, zmm7, zmmword ptr [rdx]
+        vpandd          zmm1 {k1} {z}, zmm7, zmmword ptr [rdx]
+        vpandd          zmm2 {k2} {z}, zmm7, zmm0
+        vpandd          zmm3 {k3} {z}, zmm7, zmm0
 
 
 ;
@@ -497,14 +678,45 @@ Chb75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
         jnz         short Chb75                     ; Continue if != 0.
 
 ;
-; Indicate success and return.
+; Indicate success.
 ;
 
         mov rax, 1
 
-Chb99:  ret
+;
+; Restore non-volatile registers.
+;
 
-        LEAF_END CreateHistogramAvx512AlignedAsm, _TEXT$00
+Chb99:
+        mov             rbp,   Locals.SavedRbp[rsp]
+        mov             rbx,   Locals.SavedRbx[rsp]
+        mov             rdi,   Locals.SavedRdi[rsp]
+        mov             rsi,   Locals.SavedRsi[rsp]
+        mov             r12,   Locals.SavedR12[rsp]
+        mov             r13,   Locals.SavedR13[rsp]
+        mov             r14,   Locals.SavedR14[rsp]
+        mov             r15,   Locals.SavedR15[rsp]
+
+        movdqa          xmm6,  Locals.SavedXmm6[rsp]
+        movdqa          xmm7,  Locals.SavedXmm7[rsp]
+        movdqa          xmm8,  Locals.SavedXmm8[rsp]
+        movdqa          xmm9,  Locals.SavedXmm9[rsp]
+        movdqa          xmm10, Locals.SavedXmm10[rsp]
+        movdqa          xmm11, Locals.SavedXmm11[rsp]
+        movdqa          xmm12, Locals.SavedXmm12[rsp]
+        movdqa          xmm13, Locals.SavedXmm13[rsp]
+        movdqa          xmm14, Locals.SavedXmm14[rsp]
+        movdqa          xmm15, Locals.SavedXmm15[rsp]
+
+;
+; Begin epilogue.  Deallocate stack space and return.
+;
+
+        add     rsp, LOCALS_SIZE
+        ret
+
+
+        NESTED_END CreateHistogramAvx512AlignedAsm, _TEXT$00
 
 
 ;++

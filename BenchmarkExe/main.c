@@ -14,6 +14,8 @@ Abstract:
 
 #include "stdafx.h"
 
+typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
+
 RTL GlobalRtl;
 ALLOCATOR GlobalAllocator;
 
@@ -1069,6 +1071,19 @@ Scratch5(
 }
 
 VOID
+Scratch7(
+    VOID
+    )
+{
+    ZMMWORD Index = _mm512_setzero_si512();
+    ZMMWORD Values = _mm512_set1_epi32(10);
+    ZMMWORD Result;
+
+    Result = _mm512_permutexvar_epi16(Index, Values);
+
+}
+
+VOID
 Scratch6(
     PRTL Rtl,
     PALLOCATOR Allocator,
@@ -1095,6 +1110,8 @@ Scratch6(
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
+    PCBYTE Temp1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
+    PCBYTE Temp2 = "ABACDEEFGIHIJJJKLMNDOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
     ULONG Lengths[] = {
         64,
         128,
@@ -1145,7 +1162,10 @@ Scratch6(
     QueryPerformanceFrequency(&Frequency);
 
     String.Length = 64;
-    String.Buffer = (PBYTE)QuickLazy;
+
+    CopyMemory(String.Buffer, Temp2, 64);
+    //String.Buffer = (PBYTE)QuickLazy;
+
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                   &HistogramB);
 
@@ -1275,6 +1295,7 @@ mainCRTStartup()
     //Scratch2(Rtl, Allocator, Api);
 
     //Scratch4(Rtl, Allocator, Api);
+    Scratch7();
     Scratch6(Rtl, Allocator, Api);
 
 Error:
