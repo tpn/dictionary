@@ -1084,6 +1084,28 @@ Scratch7(
 }
 
 VOID
+SlowCompareHistogram(
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Left,
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Right
+    )
+{
+    BYTE Index;
+    USHORT Length;
+    ULONG LeftCount;
+    ULONG RightCount;
+
+    Length = 255;
+
+    for (Index = 0; Index < Length; Index++) {
+        LeftCount = Left->Counts[Index];
+        RightCount = Right->Counts[Index];
+        if (LeftCount != RightCount) {
+            __debugbreak();
+        }
+    }
+}
+
+VOID
 Scratch6(
     PRTL Rtl,
     PALLOCATOR Allocator,
@@ -1098,20 +1120,25 @@ Scratch6(
     ULARGE_INTEGER BytesToWrite;
     LONG_STRING String;
     BOOLEAN Result;
-    CHARACTER_HISTOGRAM HistogramA;
+    CHARACTER_HISTOGRAM_V4 HistogramA;
     CHARACTER_HISTOGRAM_V4 HistogramB;
+    PCHARACTER_HISTOGRAM Histogram1;
+    PCHARACTER_HISTOGRAM Histogram2;
     HANDLE OutputHandle;
     LARGE_INTEGER Frequency;
     TIMESTAMP Timestamp1;
     TIMESTAMP Timestamp2;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
+    RTL_GENERIC_COMPARE_RESULTS Comparison;
     //ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
     PCBYTE Temp1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
     PCBYTE Temp2 = "ABACDEEFGIHIJJJKLMNDOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
+    PCBYTE Temp3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
+                   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
     ULONG Lengths[] = {
         64,
         128,
@@ -1161,14 +1188,29 @@ Scratch6(
 
     QueryPerformanceFrequency(&Frequency);
 
-    String.Length = 64;
+    String.Length = 128;
 
-    CopyMemory(String.Buffer, Temp2, 64);
+    CopyMemory(String.Buffer, Temp3, 128);
     //String.Buffer = (PBYTE)QuickLazy;
 
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                   &HistogramB);
 
+    ASSERT(Result);
+
+
+    Result = Api->CreateHistogramAvx2AlignedAsm(&String, &HistogramA);
+    ASSERT(Result);
+
+    Histogram1 = &HistogramA.Histogram1;
+    Histogram2 = &HistogramB.Histogram1;
+
+    SlowCompareHistogram(Histogram1, Histogram2);
+
+    Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+    ASSERT(Comparison == GenericEqual);
+
+    return;
 
     INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm  ");
     INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm");
@@ -1215,7 +1257,27 @@ Scratch6(
 
 }
 
+extern
+ULONGLONG
+TestParams2(
+    ULONG Param1,
+    CHAR Param2,
+    PVOID Param3
+    );
 
+VOID
+Scratch8(
+    VOID
+    )
+{
+    //ULONGLONG Result;
+
+    //Result = TestParams2(1, 'A', NULL);
+}
+
+extern
+VOID
+ScratchAvx1(VOID);
 
 
 DECLSPEC_NORETURN
@@ -1295,7 +1357,8 @@ mainCRTStartup()
     //Scratch2(Rtl, Allocator, Api);
 
     //Scratch4(Rtl, Allocator, Api);
-    Scratch7();
+    //ScratchAvx1();
+    //Scratch8();
     Scratch6(Rtl, Allocator, Api);
 
 Error:

@@ -24,6 +24,41 @@ include ksamd64.inc
 OP_NEQ equ 4
 
 ;
+; Define constant variables.
+;
+
+ZMM_ALIGN equ 64
+YMM_ALIGN equ 32
+XMM_ALIGN equ 16
+
+_DATA$00 SEGMENT PAGE 'DATA'
+
+        align   ZMM_ALIGN
+QuickLazy       db      "The quick brown fox jumps over the lazy dog.  "
+
+        align   ZMM_ALIGN
+        public  Test1
+Test1           db      "ABACAEEFGIHIJJJKLMNDOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
+
+        align   ZMM_ALIGN
+        public  Shuffle1
+Shuffle1        db  64  dup (02h, 00h, 00h, 00h, 60 dup (00h))
+
+        align   ZMM_ALIGN
+        public  AllOnes
+AllOnes         dd  16  dup (1)
+
+        align   ZMM_ALIGN
+        public  AllNegativeOnes
+AllNegativeOnes dd  16  dup (-1)
+
+        align   ZMM_ALIGN
+        public  AllBinsMinusOne
+AllBinsMinusOne dd  16  dup (254)
+
+_DATA$00 ends
+
+;
 ; Define the LONG_STRING structure used to encapsulate string information.
 ;
 
@@ -460,31 +495,31 @@ Cha99:  ret
 ;
 ;   r9  - Base address of second histogram buffer.
 ;
-;   r10 - Byte counter.
+;   r10 - Base address of third histogram buffer.
 ;
-;   r11 - Byte counter.
+;   r11 - Base address of forth histogram buffer.
 ;
 
-        mov     r8, rdx                             ; Load 1st histo buffer.
-        lea     r9, Histogram.Histogram2[r8]        ; Load 2nd histo buffer.
+        mov     r8,  rdx                            ; Load 1st histo buffer.
+        lea     r9,  Histogram.Histogram2[r8]       ; Load 2nd histo buffer.
+        lea     r10, Histogram.Histogram3[r8]       ; Load 3rd histo buffer.
+        lea     r11, Histogram.Histogram4[r8]       ; Load 4th histo buffer.
         mov     rdx, String.Buffer[rcx]             ; Load string buffer.
         mov     ecx, String.Length[rcx]             ; Load string length.
         shr     ecx, 6                              ; Divide by 64 to get loop
                                                     ; iterations.
 
 
-        ;xor             rax, rax
-        ;mov             al, 011h
-        ;kmovb           k1,
+        vmovntdqa       zmm28, zmmword ptr [AllOnes]
+        vmovntdqa       zmm29, zmmword ptr [AllNegativeOnes]
+        vmovntdqa       zmm30, zmmword ptr [AllBinsMinusOne]
 
         mov             rax, 1111111111111111h
         kmovq           k1, rax
         vpmovm2b        zmm1, k1
-        vpsubb          zmm21, zmm1, zmm1
 
         kshiftlq        k2, k1, 1
         vpmovm2b        zmm2, k2
-        vpsubb          zmm22, zmm2, zmm1
 
         kshiftlq        k3, k1, 2
         vpmovm2b        zmm3, k3
@@ -492,115 +527,130 @@ Cha99:  ret
         kshiftlq        k4, k1, 3
         vpmovm2b        zmm4, k4
 
-        jmp             Chb30
-
-        kshiftlb        k4, k4, 1
-        vpmovm2b        zmm2, k4
-
-        kshiftlb        k3, k1, 2
-        kshiftlb        k4, k1, 3
-
-        vpmovm2w        zmm1, k1
-        vpmovm2d        zmm2, k1
-
-        mov             ax, 0ffh
-        kmovd           k2, eax
-        vpmovm2b        zmm3, k2
-        vpmovm2w        zmm4, k2
-        vpmovm2d        zmm5, k2
-
-        ;mov             rdx, rax
-        ;shr             rdx, 1
-        ;not             rdx
-
-        kshiftld        k2, k1, 1
-        kshiftld        k3, k1, 2
-        kshiftld        k4, k1, 3
-
-        knotd           k5, k1
-        knotd           k6, k2
-        knotd           k7, k3
-
-        mov             rax, 1
-        movd            xmm0, rax
-        vpbroadcastb    zmm4, xmm0
-
-        mov             eax, -1
-        movd            xmm0, rax
-        vpbroadcastd    zmm5, xmm0
-
-        mov             ax, 31
-        not             ax
-        movd            xmm0, rax
-        vpbroadcastd    zmm6, xmm0
-
-        mov             rax, 255
-        movd            xmm0, rax
-        vpbroadcastb    zmm7, xmm0
-
-        xor             rax, rax
-        kxnorw          k2, k2, k2
 
         align 16
 
 Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
 
+;
+; Advance the source input pointer by 64 bytes.  Clear the k1 mask
+; which we'll use later for the vpgatherds.
+;
 
-Chb35:  vpandd          zmm5, zmm1, zmm0
+        add             rdx, 40h                    ; Advance 64 bytes.
+        kxnorq          k1, k2, k2                  ; Clear k1.
+
+;
+; Extract byte values for each doubleword into separate registers.
+;
+
+        vpandd          zmm5, zmm1, zmm0
         vpandd          zmm6, zmm2, zmm0
         vpandd          zmm7, zmm3, zmm0
         vpandd          zmm8, zmm4, zmm0
 
-        ;mov             rax, 0001000100010001h
-        mov             rax, 0001000100010001h
-        kmovq           k1, rax
-        vpmovm2b        zmm1, k1
+;
+; Toggle all bits in the writemasks.
+;
+
+        kxnord          k1, k5, k5
+        kxnord          k2, k6, k6
+        kxnord          k3, k7, k7
+        kxnord          k4, k0, k0
+
+;
+; Shift the second to forth registers such that the byte value is moved to the
+; least significant portion of the doubleword element of the register.
+;
+
+        vpsrldq         zmm6, zmm6, 1
+        vpsrldq         zmm7, zmm7, 2
+        vpsrldq         zmm8, zmm8, 3
+
+;
+; Gather the counts for the byte locations.
+;
+
+        vpgatherdd      zmm20 {k1}, [r8+4*zmm5]     ; Gather 1st counts.
+        vpgatherdd      zmm21 {k2}, [r9+4*zmm6]     ; Gather 2nd counts.
+        vpgatherdd      zmm22 {k3}, [r10+4*zmm7]    ; Gather 3rd counts.
+        vpgatherdd      zmm23 {k4}, [r11+4*zmm8]    ; Gather 4th counts.
+
+;
+; Determine if the characters loaded into each ZMM register conflict.
+;
+
+        vpconflictd     zmm10, zmm5
+        vpconflictd     zmm11, zmm6
+        vpconflictd     zmm12, zmm7
+        vpconflictd     zmm13, zmm8
+
+        vpxord          zmm14, zmm10, zmm11
+        vpxord          zmm15, zmm12, zmm13
+        vpxord          zmm14, zmm14, zmm15
+
+        vptestmq        k1, zmm14, zmm14            ; Any conflicts anywhere?
+        kortestq        k1, k1
+        jne             Chb40                       ; At least one conflict.
 
 
-        vpermb          zmm20, zmm10, zmm6
+;
+; No conflicts across all registers.  Proceed with adding 1 (zmm1) to all
+; the counts and then scattering the results back into memory.
+;
 
-        vprord          zmm20, zmm6, 1
-        vprord          zmm21, zmm6, 2
-        vprord          zmm22 {k2}, zmm6, 1
-        vprord          zmm23 {k3}, zmm6, 1
-        vprord          zmm24 {k4}, zmm6, 1
+        align           16
 
-        ;xor             eax, eax
-        ;add             eax, 1
-        ;kmovb           k1, eax
-        ;vpbroadcastmw2d zmm9, k1
+Chb35:  vpaddd          zmm24, zmm20, zmm28         ; Add 1st counts.
+        vpaddd          zmm25, zmm21, zmm28         ; Add 2nd counts.
+        vpaddd          zmm26, zmm22, zmm28         ; Add 3rd counts.
+        vpaddd          zmm27, zmm23, zmm28         ; Add 4th counts.
 
-        ;vpsrlvd         zmm10, zmm6, zmm0
-        ;vpsrlvd         zmm11, zmm6, zmm0
 
-        ;xor             rax, rax
-        ;add             rax, 1
+;
+; Toggle all bits in the writemasks.
+;
 
-        vpsrlvd         zmm11, zmm6, zmm1
+        kxnord          k1, k5, k5
+        kxnord          k2, k6, k6
+        kxnord          k3, k7, k7
+        kxnord          k4, k0, k0
 
-        vpsravd         zmm10 {k2}, zmm6, zmm2
-        vpsrlvd         zmm11 {k2}, zmm6, zmm2
-        vpsrlvd         zmm12 {k0}, zmm6, zmm2
-        ;vpsravd         zmm11, zmm7, 2
-        ;vpsravd         zmm12, zmm8, 3
+;
+; Scatter the counts back into their respective locations.
+;
 
-        vpconflictd     zmm20, zmm5
-        vpconflictd     zmm21, zmm10
-        vpconflictd     zmm22, zmm11
-        vpconflictd     zmm23, zmm12
+        vpscatterdd     [r8+4*zmm5]  {k1}, zmm24    ; Save 1st counts.
+        vpscatterdd     [r9+4*zmm6]  {k2}, zmm25    ; Save 2nd counts.
+        vpscatterdd     [r10+4*zmm7] {k3}, zmm26    ; Save 3rd counts.
+        vpscatterdd     [r11+4*zmm8] {k4}, zmm27    ; Save 4th counts.
 
-        vptestmd        k4, zmm20, zmm20
-        vptestmd        k5, zmm21, zmm21
-        vptestmd        k6, zmm22, zmm22
-        vptestmd        k7, zmm23, zmm23
+;
+; Decrement loop counter and jump back to the top of the processing loop if
+; there are more elements.
+;
 
-        vpandd          zmm6 {k2} {z}, zmm1, zmmword ptr [rdx]
+        sub             ecx, 1                          ; Decrement counter.
+        jnz             Chb30                           ; Continue if != 0.
 
-        vpandd          zmm1 {k1} {z}, zmm7, zmmword ptr [rdx]
-        vpandd          zmm1 {k1} {z}, zmm7, zmmword ptr [rdx]
-        vpandd          zmm2 {k2} {z}, zmm7, zmm0
-        vpandd          zmm3 {k3} {z}, zmm7, zmm0
+;
+; We've finished processing the input string, jump to finalization logic.
+;
 
+        jmp             Chb85
+        ;jmp             Chb74
+
+Chb40:  int             3                               ; Todo.
+        xor             rax, rax
+        jmp             Chb99
+
+        vptestmd        k1, zmm5, zmm5
+        vptestmd        k2, zmm6, zmm6
+        vptestmd        k3, zmm7, zmm7
+        vptestmd        k4, zmm8, zmm8
+
+        kortestw        k1, k1                      ; Check for conflicts.
+        jne             Chb40                       ; First block has conflicts.
 
 ;
 ; Top of the histogram loop.
@@ -624,12 +674,13 @@ Chb50:  vmovntdqa       zmm3, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
         kortestw        k1, k1
         je              Chb60
 
-        vplzcntd        zmm0, zmm0
-        vpsubd          zmm0, zmm6, zmm0
 
 ;
 ; Handle conflicts.
 ;
+
+Chb51:  vplzcntd        zmm0, zmm0
+        vpsubd          zmm0, zmm6, zmm0
 
 Chb55:  vpermd          zmm8 {k1} {z}, zmm2, zmm0
         vpermd          zmm0 {k1},     zmm0, zmm0
@@ -658,7 +709,8 @@ Chb60:  vpaddd          zmm0, zmm2, zmm1
 ; a time using YMM registers.
 ;
 
-        mov         ecx, 16                             ; Initialize counter.
+Chb74:  mov         ecx, 16                             ; Initialize counter.
+        xor         rax, rax
 
         align 16
 
@@ -677,11 +729,49 @@ Chb75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
         sub         ecx, 1                          ; Decrement loop counter.
         jnz         short Chb75                     ; Continue if != 0.
 
+        mov         rax, 1
+        jmp         Chb99
+;
+; Merge four histograms into the final version using ZMM registers.
+;
+
+Chb85:  mov         ecx, 16
+        xor         rax, rax
+
+        align       16
+
+Chb90:  vmovdqa32       zmm20, zmmword ptr [r8+rax]     ; Load 1st histo  0-63.
+        vmovdqa32       zmm21, zmmword ptr [r8+rax+40h] ; Load 1st histo 64-127.
+
+        vmovdqa32       zmm22, zmmword ptr [r9+rax]     ; Load 2nd histo  0-63.
+        vmovdqa32       zmm23, zmmword ptr [r9+rax+40h] ; Load 2nd histo 64-127.
+
+        vmovdqa32       zmm24, zmmword ptr [r10+rax]    ; Load 3rd histo  0-63.
+        vmovdqa32       zmm25, zmmword ptr [r10+rax+40h]; Load 3rd histo 64-127.
+
+        vmovdqa32       zmm26, zmmword ptr [r11+rax]    ; Load 4th histo  0-63.
+        vmovdqa32       zmm27, zmmword ptr [r11+rax+40h]; Load 4th histo 64-127.
+
+        vpaddd          zmm10, zmm20, zmm22             ; Add 1st 0-63 counts.
+        vpaddd          zmm11, zmm24, zmm26             ; Add 2nd 0-63 counts.
+        vpaddd          zmm12, zmm10, zmm11             ; Merge 0-63 counts.
+
+        vpaddd          zmm13, zmm21, zmm23             ; Add 1st 64-127 counts.
+        vpaddd          zmm14, zmm25, zmm27             ; Add 2nd 64-127 counts.
+        vpaddd          zmm15, zmm13, zmm12             ; Merge 64-127 counts.
+
+        vmovdqa32       zmmword ptr [r8+rax], zmm12     ; Save  0-63  counts.
+        vmovdqa32       zmmword ptr [r8+rax+40h], zmm15 ; Save 64-127 counts.
+
+        add             rax, 80h                        ; Advance to next 128b.
+        sub             ecx, 1                          ; Decrement loop cntr.
+        jnz             Chb90                           ; Continue if != 0.
+
 ;
 ; Indicate success.
 ;
 
-        mov rax, 1
+        mov     rax, 1
 
 ;
 ; Restore non-volatile registers.

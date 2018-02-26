@@ -26,8 +26,10 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>CompileAsC</CompileAs>
       <SuppressStartupBanner>true</SuppressStartupBanner>
+      <!--
       <BrowseInformation>true</BrowseInformation>
       <ExpandAttributedSource>true</ExpandAttributedSource>
+      -->
       <AssemblerOutput>All</AssemblerOutput>
       <UseDebugLibraries>false</UseDebugLibraries>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
