@@ -504,7 +504,7 @@ AppendCharToCharBuffer(
 #define OUTPUT_INT(Value)                      \
     AppendIntegerToCharBuffer(&Output, Value);
 
-#define OUTPUT_FLUSH2()                                                      \
+#define OUTPUT_FLUSH_CONSOLE()                                               \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
     Success = WriteConsoleA(OutputHandle,                                    \
                             OutputBuffer,                                    \
@@ -514,7 +514,7 @@ AppendCharToCharBuffer(
     ASSERT(Success);                                                         \
     Output = OutputBuffer
 
-#define OUTPUT_FLUSH()                                                         \
+#define OUTPUT_FLUSH_FILE()                                                    \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer)-1; \
     Success = WriteFile(OutputHandle,                                          \
                         OutputBuffer,                                          \
@@ -524,6 +524,21 @@ AppendCharToCharBuffer(
     ASSERT(Success);                                                           \
     Output = OutputBuffer
 
+#define OUTPUT_FLUSH()                                                       \
+    BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
+    Success = WriteConsoleA(OutputHandle,                                    \
+                            OutputBuffer,                                    \
+                            BytesToWrite.LowPart,                            \
+                            &CharsWritten,                                   \
+                            NULL);                                           \
+    if (!Success) {                                                          \
+        Success = WriteFile(OutputHandle,                                    \
+                            OutputBuffer,                                    \
+                            BytesToWrite.LowPart,                            \
+                            &BytesWritten,                                   \
+                            NULL);                                           \
+        ASSERT(Success);                                                     \
+    }
 
 VOID
 Scratch3(
@@ -561,7 +576,7 @@ Scratch3(
     LARGE_INTEGER Nanoseconds2;
     LARGE_INTEGER Multiplicand = { TIMESTAMP_TO_NANOSECONDS };
     ULONGLONG OutputBufferSize;
-    //ULONG BytesWritten;
+    ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
@@ -649,14 +664,14 @@ Scratch3(
     OUTPUT_RAW(" ns (");
     OUTPUT_INT(Microseconds1.QuadPart);
     OUTPUT_RAW(" us)\r\n");
-    OUTPUT_FLUSH2();
+    OUTPUT_FLUSH();
 
     OUTPUT_RAW("CreateHistogramAvx2: ");
     OUTPUT_INT(Nanoseconds2.QuadPart);
     OUTPUT_RAW(" ns (");
     OUTPUT_INT(Microseconds2.QuadPart);
     OUTPUT_RAW(" us)\r\n");
-    OUTPUT_FLUSH2();
+    OUTPUT_FLUSH();
 
     ASSERT(SetConsoleCP(OldCodePage));
 
@@ -779,7 +794,7 @@ Scratch4(
     TIMESTAMP Timestamp2;
     ULONG BufferSize = 1 << 16;
     ULONGLONG OutputBufferSize;
-    //ULONG BytesWritten;
+    ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
@@ -851,7 +866,7 @@ Scratch4(
         }
         FINISH_TIMESTAMP(1, Length, Iterations);
 
-        OUTPUT_FLUSH2();
+        OUTPUT_FLUSH();
 
         RESET_TIMESTAMP(2);
         for (Index = 0; Index < Iterations; Index++) {
@@ -864,7 +879,7 @@ Scratch4(
         }
         FINISH_TIMESTAMP(2, Length, Iterations);
 
-        OUTPUT_FLUSH2();
+        OUTPUT_FLUSH();
     } while (*(++Length));
 
     /*
@@ -887,7 +902,7 @@ Scratch4(
 
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
 
-    OUTPUT_FLUSH2();
+    OUTPUT_FLUSH();
 
     ASSERT(SetConsoleCP(OldCodePage));
 
@@ -920,7 +935,7 @@ Scratch5(
     TIMESTAMP Timestamp6;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
-    //ULONG BytesWritten;
+    ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
@@ -999,7 +1014,7 @@ Scratch5(
         }
         FINISH_TIMESTAMP(1, Length, Iterations);
 
-        OUTPUT_FLUSH2();
+        OUTPUT_FLUSH();
 
         RESET_TIMESTAMP(2);
         for (Index = 0; Index < Iterations; Index++) {
@@ -1059,12 +1074,12 @@ Scratch5(
         }
         FINISH_TIMESTAMP(6, Length, Iterations);
 
-        OUTPUT_FLUSH2();
+        OUTPUT_FLUSH();
     } while (*(++Length));
 
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
 
-    OUTPUT_FLUSH2();
+    OUTPUT_FLUSH();
 
     ASSERT(SetConsoleCP(OldCodePage));
 
@@ -1086,23 +1101,80 @@ Scratch7(
 VOID
 SlowCompareHistogram(
     _In_ _Const_ PCCHARACTER_HISTOGRAM Left,
-    _In_ _Const_ PCCHARACTER_HISTOGRAM Right
+    _In_ _Const_ PCCHARACTER_HISTOGRAM Right,
+    _Inout_ PPCHAR OutputPointer
     )
 {
     BYTE Index;
-    USHORT Length;
     ULONG LeftCount;
     ULONG RightCount;
+    PCHAR Output;
+    Output = *OutputPointer;
 
-    Length = 255;
-
-    for (Index = 0; Index < Length; Index++) {
+    for (Index = 0; Index < 10; Index++) {
         LeftCount = Left->Counts[Index];
         RightCount = Right->Counts[Index];
-        if (LeftCount != RightCount) {
-            __debugbreak();
+        if (LeftCount == RightCount) {
+            continue;
         }
+        OUTPUT_RAW("[  ");
+        OUTPUT_INT(Index);
+        OUTPUT_CHR(' ');
+        OUTPUT_CHR((CHAR)Index);
+        OUTPUT_RAW("]:\t");
+        OUTPUT_INT(LeftCount);
+        if (LeftCount != RightCount) {
+            OUTPUT_RAW("\t!=\t");
+        } else {
+            OUTPUT_RAW("\t==\t");
+        }
+        OUTPUT_INT(RightCount);
+        OUTPUT_RAW("\n");
     }
+
+    for (Index = 10; Index < 100; Index++) {
+        LeftCount = Left->Counts[Index];
+        RightCount = Right->Counts[Index];
+        if (LeftCount == RightCount) {
+            continue;
+        }
+        OUTPUT_RAW("[ ");
+        OUTPUT_INT(Index);
+        OUTPUT_CHR(' ');
+        OUTPUT_CHR((CHAR)Index);
+        OUTPUT_RAW("]:\t");
+        OUTPUT_INT(LeftCount);
+        if (LeftCount != RightCount) {
+            OUTPUT_RAW("\t!=\t");
+        } else {
+            OUTPUT_RAW("\t==\t");
+        }
+        OUTPUT_INT(RightCount);
+        OUTPUT_RAW("\n");
+    }
+
+    for (Index = 100; Index < 255; Index++) {
+        LeftCount = Left->Counts[Index];
+        RightCount = Right->Counts[Index];
+        if (LeftCount == RightCount) {
+            continue;
+        }
+        OUTPUT_RAW("[");
+        OUTPUT_INT(Index);
+        OUTPUT_CHR(' ');
+        OUTPUT_CHR((CHAR)Index);
+        OUTPUT_RAW("]:\t");
+        OUTPUT_INT(LeftCount);
+        if (LeftCount != RightCount) {
+            OUTPUT_RAW("\t!=\t");
+        } else {
+            OUTPUT_RAW("\t==\t");
+        }
+        OUTPUT_INT(RightCount);
+        OUTPUT_RAW("\n");
+    }
+
+    *OutputPointer = Output;
 }
 
 VOID
@@ -1131,7 +1203,7 @@ Scratch6(
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
     RTL_GENERIC_COMPARE_RESULTS Comparison;
-    //ULONG BytesWritten;
+    ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
@@ -1188,9 +1260,10 @@ Scratch6(
 
     QueryPerformanceFrequency(&Frequency);
 
-    String.Length = 128;
+    //String.Length = 128;
+    String.Length = 64;
 
-    CopyMemory(String.Buffer, Temp3, 128);
+    CopyMemory(String.Buffer, Temp3, 64);
     //String.Buffer = (PBYTE)QuickLazy;
 
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
@@ -1205,7 +1278,10 @@ Scratch6(
     Histogram1 = &HistogramA.Histogram1;
     Histogram2 = &HistogramB.Histogram1;
 
-    SlowCompareHistogram(Histogram1, Histogram2);
+    SlowCompareHistogram(Histogram1, Histogram2, &Output);
+    OUTPUT_FLUSH();
+
+    return;
 
     Comparison = Api->CompareHistograms(Histogram1, Histogram2);
     ASSERT(Comparison == GenericEqual);
@@ -1246,12 +1322,12 @@ Scratch6(
         FINISH_TIMESTAMP(2, Length, Iterations);
 
 
-        OUTPUT_FLUSH2();
+        OUTPUT_FLUSH();
     } while (*(++Length));
 
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
 
-    OUTPUT_FLUSH2();
+    OUTPUT_FLUSH();
 
     ASSERT(SetConsoleCP(OldCodePage));
 
