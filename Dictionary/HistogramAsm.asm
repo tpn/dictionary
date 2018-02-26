@@ -553,10 +553,10 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
 ; Toggle all bits in the writemasks.
 ;
 
-        kxnord          k1, k5, k5
-        kxnord          k2, k6, k6
-        kxnord          k3, k7, k7
-        kxnord          k4, k0, k0
+        kxnorq          k1, k5, k5
+        kxnorq          k2, k6, k6
+        kxnorq          k3, k7, k7
+        kxnorq          k4, k0, k0
 
 ;
 ; Shift the second to forth registers such that the byte value is moved to the
@@ -611,10 +611,10 @@ Chb35:  vpaddd          zmm24, zmm20, zmm28         ; Add 1st counts.
 ; Toggle all bits in the writemasks.
 ;
 
-        kxnord          k1, k5, k5
-        kxnord          k2, k6, k6
-        kxnord          k3, k7, k7
-        kxnord          k4, k0, k0
+        kxnorq          k1, k5, k5
+        kxnorq          k2, k6, k6
+        kxnorq          k3, k7, k7
+        kxnorq          k4, k0, k0
 
 ;
 ; Scatter the counts back into their respective locations.
@@ -735,7 +735,7 @@ Chb75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
 ; Merge four histograms into the final version using ZMM registers.
 ;
 
-Chb85:  mov         ecx, 16
+Chb85:  mov         ecx, 8
         xor         rax, rax
 
         align       16
@@ -752,13 +752,13 @@ Chb90:  vmovdqa32       zmm20, zmmword ptr [r8+rax]     ; Load 1st histo  0-63.
         vmovdqa32       zmm26, zmmword ptr [r11+rax]    ; Load 4th histo  0-63.
         vmovdqa32       zmm27, zmmword ptr [r11+rax+40h]; Load 4th histo 64-127.
 
-        vpaddd          zmm10, zmm20, zmm22             ; Add 1st 0-63 counts.
-        vpaddd          zmm11, zmm24, zmm26             ; Add 2nd 0-63 counts.
+        vpaddd          zmm10, zmm20, zmm22             ; Add 1-2 0-63 counts.
+        vpaddd          zmm11, zmm24, zmm26             ; Add 3-4 0-63 counts.
         vpaddd          zmm12, zmm10, zmm11             ; Merge 0-63 counts.
 
-        vpaddd          zmm13, zmm21, zmm23             ; Add 1st 64-127 counts.
-        vpaddd          zmm14, zmm25, zmm27             ; Add 2nd 64-127 counts.
-        vpaddd          zmm15, zmm13, zmm12             ; Merge 64-127 counts.
+        vpaddd          zmm13, zmm21, zmm23             ; Add 1-2 64-127 counts.
+        vpaddd          zmm14, zmm25, zmm27             ; Add 3-4 64-127 counts.
+        vpaddd          zmm15, zmm13, zmm14             ; Merge 64-127 counts.
 
         vmovdqa32       zmmword ptr [r8+rax], zmm12     ; Save  0-63  counts.
         vmovdqa32       zmmword ptr [r8+rax+40h], zmm15 ; Save 64-127 counts.
