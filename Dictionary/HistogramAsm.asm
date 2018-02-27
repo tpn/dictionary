@@ -21,7 +21,8 @@ include ksamd64.inc
 ; Define constants.
 ;
 
-OP_NEQ equ 4
+OP_EQ   equ 0
+OP_NEQ  equ 4
 
 ;
 ; Define constant variables.
@@ -55,6 +56,10 @@ AllNegativeOnes dd  16  dup (-1)
         align   ZMM_ALIGN
         public  AllBinsMinusOne
 AllBinsMinusOne dd  16  dup (254)
+
+        align   ZMM_ALIGN
+        public  AllThirtyOne
+AllThirtyOne    dd  16  dup (31)
 
 _DATA$00 ends
 
@@ -497,7 +502,7 @@ Cha99:  ret
 ;
 ;   r10 - Base address of third histogram buffer.
 ;
-;   r11 - Base address of forth histogram buffer.
+;   r11 - Base address of fourth histogram buffer.
 ;
 
         mov     r8,  rdx                            ; Load 1st histo buffer.
@@ -513,6 +518,7 @@ Cha99:  ret
         vmovntdqa       zmm28, zmmword ptr [AllOnes]
         vmovntdqa       zmm29, zmmword ptr [AllNegativeOnes]
         vmovntdqa       zmm30, zmmword ptr [AllBinsMinusOne]
+        vmovntdqa       zmm31, zmmword ptr [AllThirtyOne]
 
         mov             rax, 1111111111111111h
         kmovq           k1, rax
@@ -559,7 +565,7 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
         kxnorq          k4, k0, k0
 
 ;
-; Shift the second to forth registers such that the byte value is moved to the
+; Shift the second to fourth registers such that the byte value is moved to the
 ; least significant portion of the doubleword element of the register.
 ;
 
@@ -585,9 +591,9 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
         vpconflictd     zmm12, zmm7
         vpconflictd     zmm13, zmm8
 
-        vpxord          zmm14, zmm10, zmm11
-        vpxord          zmm15, zmm12, zmm13
-        vpxord          zmm14, zmm14, zmm15
+        vpord          zmm14, zmm10, zmm11
+        vpord          zmm15, zmm12, zmm13
+        vpord          zmm14, zmm14, zmm15
 
         vptestmq        k1, zmm14, zmm14            ; Any conflicts anywhere?
         kortestq        k1, k1
@@ -595,7 +601,7 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
 
 
 ;
-; No conflicts across all registers.  Proceed with adding 1 (zmm1) to all
+; No conflicts across all registers.  Proceed with adding 1 (zmm28) to all
 ; the counts and then scattering the results back into memory.
 ;
 
@@ -605,7 +611,6 @@ Chb35:  vpaddd          zmm24, zmm20, zmm28         ; Add 1st counts.
         vpaddd          zmm25, zmm21, zmm28         ; Add 2nd counts.
         vpaddd          zmm26, zmm22, zmm28         ; Add 3rd counts.
         vpaddd          zmm27, zmm23, zmm28         ; Add 4th counts.
-
 
 ;
 ; Toggle all bits in the writemasks.
@@ -630,7 +635,7 @@ Chb35:  vpaddd          zmm24, zmm20, zmm28         ; Add 1st counts.
 ; there are more elements.
 ;
 
-        sub             ecx, 1                          ; Decrement counter.
+Chb38:  sub             ecx, 1                          ; Decrement counter.
         jnz             Chb30                           ; Continue if != 0.
 
 ;
@@ -638,101 +643,191 @@ Chb35:  vpaddd          zmm24, zmm20, zmm28         ; Add 1st counts.
 ;
 
         jmp             Chb85
-        ;jmp             Chb74
-
-Chb40:  int             3                               ; Todo.
-        xor             rax, rax
-        jmp             Chb99
-
-        vptestmd        k1, zmm5, zmm5
-        vptestmd        k2, zmm6, zmm6
-        vptestmd        k3, zmm7, zmm7
-        vptestmd        k4, zmm8, zmm8
-
-        kortestw        k1, k1                      ; Check for conflicts.
-        jne             Chb40                       ; First block has conflicts.
 
 ;
-; Top of the histogram loop.
+; Conflict handling logic.  At least one of the zmm registers had a conflict.
 ;
 
-        align 16
+Chb40:  vptestmd        k1, zmm10, zmm10
+
+        kortestw        k1, k1                      ; Check 1st for conflicts.
+        jne             Chb42                       ; 1st block has conflicts.
+        jmp             Chb51                       ; No conflicts, test 2nd.
 
 ;
-; Load the first 64 bytes into ymm0.  Duplicate the lower 16 bytes in xmm0 and
-; xmm1, then extract the high 16 bytes into xmm2 and xmm3.
+; First register (zmm5) has a conflict (zmm10).
 ;
 
-Chb50:  vmovntdqa       zmm3, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
-        vpconflictd     zmm0, zmm3
-        vpandd          zmm8, zmm7, ymmword ptr [rdx]
-        kxnorw          k1, k1, k1
-        vmovaps         zmm2, zmm4
-        vpxord          zmm1, zmm1, zmm1
-        vpgatherdd      zmm1 {k1}, [r8+zmm9*4]
-        vptestmd        k1, zmm0, zmm0
+Chb42:  vplzcntd        zmm9, zmm10                 ; Count leading zeros.
+        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
+        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
+
+        xor             bl, bl
+        kmovw           eax, k1
+
+        align           16
+
+Chb45:  vpbroadcast     zmm5, eax
+        kmovw           k2, eax
+
+        vpermd          zmm17 {k2},     zmm19, zmm19
+        vpaddd          zmm12 {k2},     zmm12, zmm18
+
+        vpcmpd          k1, zmm29, zmm19, OP_NEQ
+        vpcmpd          k7, zmm29, zmm19, OP_EQ
+        vptestmd        k6, zmm29, zmm19
         kortestw        k1, k1
-        je              Chb60
+        jne             Chb46
 
+
+Chb46:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
+        vpermd          zmm19 {k1},     zmm19, zmm19
+        vpaddd          zmm12 {k1},     zmm12, zmm18
+        vpcmpd          k1, zmm29, zmm19, OP_NEQ
+        vpcmpd          k7, zmm29, zmm19, OP_EQ
+        vptestmd        k6, zmm29, zmm19
+        kortestw        k1, k1
+        jne             Chb46
 
 ;
-; Handle conflicts.
+; Conflicts have been resolved for first register (zmm5), with the partial
+; counts now living in zmm12.  Add to the existing counts (zmm20) and scatter
+; back to memory.
 ;
 
-Chb51:  vplzcntd        zmm0, zmm0
-        vpsubd          zmm0, zmm6, zmm0
+Chb47:  vpaddd          zmm12, zmm12, zmm20         ; Add partial counts.
+        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
+        vpscatterdd     [r8+4*zmm5] {k1}, zmm12     ; Save counts.
 
-Chb55:  vpermd          zmm8 {k1} {z}, zmm2, zmm0
-        vpermd          zmm0 {k1},     zmm0, zmm0
-        vpaddd          zmm2 {k1},     zmm2, zmm8
-        vpcmpd          k1 {k2}, zmm5, zmm0, OP_NEQ
+;
+; Intentional follow-on.
+;
+
+;
+; Test the second register (zmm6) for conflicts.
+;
+
+Chb51:  vptestmd        k2, zmm11, zmm11
+        kortestw        k2, k2                      ; Test for 2nd conflicts.
+        jne             Chb52                       ; 2nd block has conflicts.
+        jmp             Chb61                       ; No conflicts, test 3rd.
+
+;
+; Second register (zmm6) has a conflict (zmm11).
+;
+
+Chb52:  vplzcntd        zmm9, zmm11                 ; Count leading zeros.
+        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
+        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
+
+        align           16
+
+Chb55:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
+        vpermd          zmm19 {k1},     zmm19, zmm19
+        vpaddd          zmm12 {k1},     zmm12, zmm18
+        vpcmpd          k1, zmm29, zmm19, OP_NEQ
         kortestw        k1, k1
         jne             Chb55
 
 ;
-; No conflicts; update counts.
+; Conflicts have been resolved for second register (zmm6), with the partial
+; counts now living in zmm12.  Add to the existing counts (zmm21) and scatter
+; back to memory.
 ;
 
-Chb60:  vpaddd          zmm0, zmm2, zmm1
-        kxnorw          k1, k1, k1
-        vpscatterdd     [r8+zmm3*4]{k1}, zmm0
+        vpaddd          zmm12, zmm12, zmm21         ; Add partial counts.
+        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
+        vpscatterdd     [r8+4*zmm6] {k1}, zmm12     ; Save counts.
 
 ;
-; End of loop.  Update loop counter and determine if we're finished.
+; Intentional follow-on.
 ;
 
-        sub         ecx, 1                              ; Decrement counter.
-        jnz         Chb50                               ; Continue loop if != 0.
-
 ;
-; We've finished creating the histogram.  Merge the two histograms 64 bytes at
-; a time using YMM registers.
+; Test the third register (zmm7) for conflicts.
 ;
 
-Chb74:  mov         ecx, 16                             ; Initialize counter.
-        xor         rax, rax
+Chb61:  vptestmd        k3, zmm12, zmm12
+        kortestw        k3, k3                      ; Test for 3rd conflicts.
+        jne             Chb62                       ; 3rd block has conflicts.
+        jmp             Chb71                       ; No conflicts, must be 4th.
 
-        align 16
-
-Chb75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
-        vmovntdqa   ymm1, ymmword ptr [r8+rax+20h]  ; Load 1st histo 32-63.
-        vmovntdqa   ymm2, ymmword ptr [r9+rax]      ; Load 2nd histo  0-31.
-        vmovntdqa   ymm3, ymmword ptr [r9+rax+20h]  ; Load 2nd histo 32-63.
-
-        vpaddd      ymm4, ymm0, ymm2                ; Add  0-31 counts.
-        vpaddd      ymm5, ymm1, ymm3                ; Add 32-63 counts.
-
-        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save counts for  0-31.
-        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save counts for 32-63.
-
-        add         rax, 40h                        ; Advance to next 64 bytes.
-        sub         ecx, 1                          ; Decrement loop counter.
-        jnz         short Chb75                     ; Continue if != 0.
-
-        mov         rax, 1
-        jmp         Chb99
 ;
-; Merge four histograms into the final version using ZMM registers.
+; Third register (zmm7) has a conflict (zmm12)
+;
+
+Chb62:  vplzcntd        zmm9, zmm12                 ; Count leading zeros.
+        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
+        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
+
+        align           16
+
+Chb65:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
+        vpermd          zmm19 {k1},     zmm19, zmm19
+        vpaddd          zmm12 {k1},     zmm12, zmm18
+        vpcmpd          k1, zmm29, zmm19, OP_NEQ
+        kortestw        k1, k1
+        jne             Chb65
+
+;
+; Conflicts have been resolved for third register (zmm7), with the partial
+; counts now living in zmm12.  Add to the existing counts (zmm22) and scatter
+; back to memory.
+;
+
+        vpaddd          zmm12, zmm12, zmm22         ; Add partial counts.
+        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
+        vpscatterdd     [r8+4*zmm7] {k1}, zmm12     ; Save counts.
+
+;
+; Intentional follow-on.
+;
+
+;
+; Test the fourth register (zmm8) for conflicts.
+;
+
+Chb71:  vptestmd        k4, zmm13, zmm13
+        kortestw        k4, k4                      ; Test for 4th conflicts.
+        jne             Chb72                       ; 4th block has conflicts.
+        jmp             Chb38                       ; No conflicts, we're done.
+
+;
+; Forth register (zmm8) has a conflict (zmm13)
+;
+
+Chb72:  vplzcntd        zmm9, zmm13                 ; Count leading zeros.
+        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
+        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
+
+        align           16
+
+Chb75:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
+        vpermd          zmm19 {k1},     zmm19, zmm19
+        vpaddd          zmm12 {k1},     zmm12, zmm18
+        vpcmpd          k1, zmm29, zmm19, OP_NEQ
+        kortestw        k1, k1
+        jne             Chb75
+
+;
+; Conflicts have been resolved for fourth register (zmm8), with the partial
+; counts now living in zmm12.  Add to the existing counts (zmm23) and scatter
+; back to memory.
+;
+
+        vpaddd          zmm12, zmm12, zmm23         ; Add partial counts.
+        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
+        vpscatterdd     [r8+4*zmm8] {k1}, zmm12     ; Save counts.
+
+;
+; Jump back to loop processing.
+;
+
+        jmp Chb38
+
+;
+; Merge four histograms into one, 128 bytes at a time (two zmm registers in
+; flight per histogram).
 ;
 
 Chb85:  mov         ecx, 8
@@ -752,16 +847,16 @@ Chb90:  vmovdqa32       zmm20, zmmword ptr [r8+rax]     ; Load 1st histo  0-63.
         vmovdqa32       zmm26, zmmword ptr [r11+rax]    ; Load 4th histo  0-63.
         vmovdqa32       zmm27, zmmword ptr [r11+rax+40h]; Load 4th histo 64-127.
 
-        vpaddd          zmm10, zmm20, zmm22             ; Add 1-2 0-63 counts.
-        vpaddd          zmm11, zmm24, zmm26             ; Add 3-4 0-63 counts.
-        vpaddd          zmm12, zmm10, zmm11             ; Merge 0-63 counts.
+        vpaddd          zmm10, zmm20, zmm22             ; Add 1-2 0-63 histo.
+        vpaddd          zmm11, zmm24, zmm26             ; Add 3-4 0-63 histo.
+        vpaddd          zmm12, zmm10, zmm11             ; Merge 0-63 histo.
 
-        vpaddd          zmm13, zmm21, zmm23             ; Add 1-2 64-127 counts.
-        vpaddd          zmm14, zmm25, zmm27             ; Add 3-4 64-127 counts.
-        vpaddd          zmm15, zmm13, zmm14             ; Merge 64-127 counts.
+        vpaddd          zmm13, zmm21, zmm23             ; Add 1-2 64-127 histo.
+        vpaddd          zmm14, zmm25, zmm27             ; Add 3-4 64-127 histo.
+        vpaddd          zmm15, zmm13, zmm14             ; Merge 64-127 histo.
 
-        vmovdqa32       zmmword ptr [r8+rax], zmm12     ; Save  0-63  counts.
-        vmovdqa32       zmmword ptr [r8+rax+40h], zmm15 ; Save 64-127 counts.
+        vmovdqa32       zmmword ptr [r8+rax], zmm12     ; Save  0-63  histo.
+        vmovdqa32       zmmword ptr [r8+rax+40h], zmm15 ; Save 64-127 histo.
 
         add             rax, 80h                        ; Advance to next 128b.
         sub             ecx, 1                          ; Decrement loop cntr.

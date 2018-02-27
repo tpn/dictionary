@@ -1208,7 +1208,7 @@ Scratch6(
     PCHAR Output;
     PCHAR OutputBuffer;
     PCBYTE Temp1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
-    PCBYTE Temp2 = "ABACDEEFGIHIJJJKLMNDOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
+    PCBYTE Temp2 = "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD";
     PCBYTE Temp3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
     ULONG Lengths[] = {
@@ -1260,10 +1260,10 @@ Scratch6(
 
     QueryPerformanceFrequency(&Frequency);
 
-    //String.Length = 128;
     String.Length = 64;
+    //String.Length = 64;
 
-    CopyMemory(String.Buffer, Temp3, 64);
+    CopyMemory(String.Buffer, Temp2, 64);
     //String.Buffer = (PBYTE)QuickLazy;
 
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
@@ -1278,6 +1278,7 @@ Scratch6(
     Histogram1 = &HistogramA.Histogram1;
     Histogram2 = &HistogramB.Histogram1;
 
+    Comparison = Api->CompareHistograms(Histogram1, Histogram2);
     SlowCompareHistogram(Histogram1, Histogram2, &Output);
     OUTPUT_FLUSH();
 
