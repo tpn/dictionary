@@ -533,7 +533,6 @@ Cha99:  ret
         kshiftlq        k4, k1, 3
         vpmovm2b        zmm4, k4
 
-
         align 16
 
 Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
@@ -659,35 +658,21 @@ Chb40:  vptestmd        k1, zmm10, zmm10
 ;
 
 Chb42:  vplzcntd        zmm9, zmm10                 ; Count leading zeros.
-        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
+        vpsubd          zmm19, zmm31, zmm9          ; Subtract 31 from elems.
         vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
 
-        xor             bl, bl
-        kmovw           eax, k1
 
-        align           16
-
-Chb45:  vpbroadcast     zmm5, eax
-        kmovw           k2, eax
-
-        vpermd          zmm17 {k2},     zmm19, zmm19
-        vpaddd          zmm12 {k2},     zmm12, zmm18
-
-        vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        vpcmpd          k7, zmm29, zmm19, OP_EQ
-        vptestmd        k6, zmm29, zmm19
-        kortestw        k1, k1
-        jne             Chb46
+        vmovaps         zmm18, zmm0
+        vpternlogd      zmm0 {k0}, zmm0, zmm0, 255
+        vmovaps          zmm0, zmm18
 
 
-Chb46:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
+Chb45:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
         vpermd          zmm19 {k1},     zmm19, zmm19
         vpaddd          zmm12 {k1},     zmm12, zmm18
         vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        vpcmpd          k7, zmm29, zmm19, OP_EQ
-        vptestmd        k6, zmm29, zmm19
         kortestw        k1, k1
-        jne             Chb46
+        jne             Chb45
 
 ;
 ; Conflicts have been resolved for first register (zmm5), with the partial
@@ -696,7 +681,7 @@ Chb46:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
 ;
 
 Chb47:  vpaddd          zmm12, zmm12, zmm20         ; Add partial counts.
-        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
+        kxnorw          k1, k1, k1                  ; Set all bits in writemask.
         vpscatterdd     [r8+4*zmm5] {k1}, zmm12     ; Save counts.
 
 ;
