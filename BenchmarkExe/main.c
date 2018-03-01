@@ -30,9 +30,24 @@ HMODULE GlobalModule = 0;
 #define TIMESTAMP_TO_MICROSECONDS 1000000ULL
 #define TIMESTAMP_TO_NANOSECONDS  1000000000ULL
 
+DECLSPEC_ALIGN(64)
 static const PCBYTE QuickLazy = \
     "The quick brown fox jumps over the lazy dog and then "
     "the lazy dog jumps over the quick brown fox.";
+
+DECLSPEC_ALIGN(64)
+static const PCBYTE AbcdRepeat = \
+    "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD"
+    "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD";
+
+DECLSPEC_ALIGN(64)
+static const PCBYTE AlphabetRepeat = \
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!$";
+
+DECLSPEC_ALIGN(64)
+static const PCBYTE AlphabetRepeatx2 = \
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
 
 #ifndef ASSERT
 #define ASSERT(Condition) \
@@ -575,7 +590,44 @@ AppendCharToCharBuffer(
                             &BytesWritten,                                   \
                             NULL);                                           \
         ASSERT(Success);                                                     \
+    }                                                                        \
+    Output = OutputBuffer
+
+
+#pragma optimize("", off)
+NOINLINE
+VOID
+FillBufferWithBytes(
+    PBYTE Dest,
+    PCBYTE Source,
+    ULONGLONG SizeOfDest,
+    ULONGLONG SizeOfSource
+    )
+{
+    ULONGLONG Index;
+    ULONGLONG Count;
+    ULONGLONG Total;
+    YMMWORD Chunk1;
+    YMMWORD Chunk2;
+    PYMMWORD DestYmm;
+    PYMMWORD SourceYmm;
+
+    DestYmm = (PYMMWORD)Dest;
+    SourceYmm = (PYMMWORD)Source;
+
+    Total = SizeOfDest;
+    Count = Total >> 6;
+
+    Chunk1 = _mm256_loadu_si256((PYMMWORD)SourceYmm);
+    Chunk2 = _mm256_loadu_si256((PYMMWORD)SourceYmm+1);
+
+    for (Index = 0; Index < Count; Index++) {
+        _mm256_store_si256((PYMMWORD)DestYmm, Chunk1);
+        _mm256_store_si256((PYMMWORD)DestYmm+1, Chunk2);
+        DestYmm += 2;
     }
+}
+#pragma optimize("", on)
 
 VOID
 Scratch3(
@@ -945,6 +997,23 @@ Scratch4(
 
 }
 
+#pragma optimize("", off)
+NOINLINE
+VOID
+CanWeUseAvx512(PBOOLEAN UseAvx512Pointer)
+{
+    BOOLEAN UseAvx512 = TRUE;
+    TRY_AVX512 {
+        ZMMWORD Test1 = _mm512_set1_epi64(1);
+        ZMMWORD Test2 = _mm512_add_epi64(Test1, Test1);
+        UNREFERENCED_PARAMETER(Test2);
+    } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION{
+        UseAvx512 = FALSE;
+    }
+    *UseAvx512Pointer = UseAvx512;
+}
+#pragma optimize("", on)
+
 VOID
 Scratch5(
     PRTL Rtl,
@@ -960,6 +1029,7 @@ Scratch5(
     ULARGE_INTEGER BytesToWrite;
     LONG_STRING String;
     BOOLEAN Result;
+    BOOLEAN UseAvx512;
     CHARACTER_HISTOGRAM HistogramA;
     CHARACTER_HISTOGRAM_V4 HistogramB;
     HANDLE OutputHandle;
@@ -970,6 +1040,8 @@ Scratch5(
     TIMESTAMP Timestamp4;
     TIMESTAMP Timestamp5;
     TIMESTAMP Timestamp6;
+    TIMESTAMP Timestamp7;
+    TIMESTAMP Timestamp8;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
     ULONG BytesWritten;
@@ -1025,13 +1097,18 @@ Scratch5(
 
     QueryPerformanceFrequency(&Frequency);
 
+    CanWeUseAvx512(&UseAvx512);
 
-    INIT_TIMESTAMP(1, "CreateHistogram              ");
-    INIT_TIMESTAMP(2, "CreateHistogramAvx2C         ");
-    INIT_TIMESTAMP(3, "CreateHistogramAvx2AlignedC  ");
-    INIT_TIMESTAMP(4, "CreateHistogramAvx2AlignedC32");
-    INIT_TIMESTAMP(5, "CreateHistogramAvx2AlignedCV4");
-    INIT_TIMESTAMP(6, "CreateHistogramAvx2AlignedAsm");
+    INIT_TIMESTAMP(1, "CreateHistogram                   ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx2C              ");
+    INIT_TIMESTAMP(3, "CreateHistogramAvx2AlignedC       ");
+    INIT_TIMESTAMP(4, "CreateHistogramAvx2AlignedC32     ");
+    INIT_TIMESTAMP(5, "CreateHistogramAvx2AlignedCV4     ");
+    INIT_TIMESTAMP(6, "CreateHistogramAvx2AlignedAsm     ");
+    if (UseAvx512) {
+        INIT_TIMESTAMP(7, "CreateHistogramAvx512AlignedAsm   ");
+        INIT_TIMESTAMP(8, "CreateHistogramAvx512AlignedAsm_v2");
+    }
 
     OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
 
@@ -1110,6 +1187,30 @@ Scratch5(
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(6, Length, Iterations);
+
+        if (UseAvx512) {
+            RESET_TIMESTAMP(7);
+            for (Index = 0; Index < Iterations; Index++) {
+                ZeroStruct(HistogramB);
+                START_TIMESTAMP(7);
+                Result = Api->CreateHistogramAvx512AlignedAsm(&String,
+                                                              &HistogramB);
+                END_TIMESTAMP(7);
+                ASSERT(Result);
+            }
+            FINISH_TIMESTAMP(7, Length, Iterations);
+
+            RESET_TIMESTAMP(8);
+            for (Index = 0; Index < Iterations; Index++) {
+                ZeroStruct(HistogramB);
+                START_TIMESTAMP(8);
+                Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
+                                                                 &HistogramB);
+                END_TIMESTAMP(8);
+                ASSERT(Result);
+            }
+            FINISH_TIMESTAMP(8, Length, Iterations);
+        }
 
         OUTPUT_FLUSH();
     } while (*(++Length));
@@ -1398,6 +1499,7 @@ Scratch9(
     LARGE_INTEGER Frequency;
     TIMESTAMP Timestamp1;
     TIMESTAMP Timestamp2;
+    TIMESTAMP Timestamp3;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
     //RTL_GENERIC_COMPARE_RESULTS Comparison;
@@ -1405,10 +1507,6 @@ Scratch9(
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
-    PCBYTE Temp1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
-    PCBYTE Temp2 = "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD";
-    PCBYTE Temp3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
-                   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
     ULONG Lengths[] = {
         64,
         128,
@@ -1456,10 +1554,19 @@ Scratch9(
     String.Hash = 0;
     String.Buffer = Buffer;
 
+    if (1) {
+        FillBufferWithBytes(Buffer,
+                            AbcdRepeat,
+                            //AlphabetRepeat,
+                            BufferSize,
+                            64);
+    }
+
     QueryPerformanceFrequency(&Frequency);
 
-    INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm  ");
-    INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm");
+    INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm     ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm   ");
+    INIT_TIMESTAMP(3, "CreateHistogramAvx512AlignedAsm_v2");
 
     OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
 
@@ -1491,8 +1598,18 @@ Scratch9(
         }
         FINISH_TIMESTAMP(2, Length, Iterations);
 
+        RESET_TIMESTAMP(3);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(3);
+            Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
+                                                             &HistogramB);
+            END_CYCLES(3);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(3, Length, Iterations);
 
-        OUTPUT_FLUSH();
+        //OUTPUT_FLUSH();
     } while (*(++Length));
 
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
@@ -1607,7 +1724,8 @@ mainCRTStartup()
     //ScratchAvx1();
     //Scratch8();
     //Scratch6(Rtl, Allocator, Api);
-    Scratch9(Rtl, Allocator, Api);
+    //Scratch9(Rtl, Allocator, Api);
+    Scratch5(Rtl, Allocator, Api);
 
 Error:
 

@@ -468,6 +468,7 @@ typedef struct _DICTIONARY_FUNCTIONS {
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedCV4;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v2;
 
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
@@ -513,6 +514,7 @@ LoadDictionaryModule(
         "CreateHistogramAvx2AlignedAsm",
         "CreateHistogramAvx2AlignedCV4",
         "CreateHistogramAvx512AlignedAsm",
+        "CreateHistogramAvx512AlignedAsm_v2",
 
     };
 
@@ -556,33 +558,6 @@ LoadDictionaryModule(
 
     return TRUE;
 }
-
-
-//
-// API exports.
-//
-
-/*
-DICTIONARY_API CREATE_DICTIONARY CreateDictionary;
-DICTIONARY_API DESTROY_DICTIONARY DestroyDictionary;
-
-DICTIONARY_API ADD_WORD AddWord;
-DICTIONARY_API FIND_WORD FindWord;
-DICTIONARY_API REMOVE_WORD RemoveWord;
-DICTIONARY_API GET_WORD_STATS GetWordStats;
-DICTIONARY_API GET_WORD_ANAGRAMS GetWordAnagrams;
-DICTIONARY_API GET_DICTIONARY_STATS GetDictionaryStats;
-
-DICTIONARY_API COMPARE_WORDS CompareWords;
-DICTIONARY_API SET_MINIMUM_WORD_LENGTH SetMinimumWordLength;
-DICTIONARY_API SET_MAXIMUM_WORD_LENGTH SetMaximumWordLength;
-
-DICTIONARY_API CREATE_HISTOGRAM CreateHistogram;
-DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2C;
-DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
-DICTIONARY_API CREATE_HISTOGRAM2 CreateHistogramAvx2AlignedAsm;
-*/
-
 
 #ifdef __cplusplus
 } // extern "C"
