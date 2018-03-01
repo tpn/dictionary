@@ -70,6 +70,13 @@ Histo1710v2(
     PCHARACTER_HISTOGRAM_V4 Histogram
     );
 
+extern
+BOOLEAN
+Histo1710v3(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+
 
 VOID
 Scratch2(
@@ -1298,7 +1305,7 @@ Scratch6(
 
     //Result = Histo1544v2(&String, &HistogramB);
     //Result = Histo1710(&String, &HistogramB);
-    Result = Histo1710v2(&String, &HistogramB);
+    //Result = Histo1710v3(&String, &HistogramB);
 
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                   &HistogramB);
@@ -1367,6 +1374,135 @@ Scratch6(
     ASSERT(SetConsoleCP(OldCodePage));
 
 }
+
+VOID
+Scratch9(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PDICTIONARY_FUNCTIONS Api
+    )
+{
+    BOOL Success;
+    ULONG Index;
+    ULONG Iterations;
+    ULONG OldCodePage;
+    PBYTE Buffer;
+    ULARGE_INTEGER BytesToWrite;
+    LONG_STRING String;
+    BOOLEAN Result;
+    CHARACTER_HISTOGRAM_V4 HistogramA;
+    CHARACTER_HISTOGRAM_V4 HistogramB;
+    //PCHARACTER_HISTOGRAM Histogram1;
+    //PCHARACTER_HISTOGRAM Histogram2;
+    HANDLE OutputHandle;
+    LARGE_INTEGER Frequency;
+    TIMESTAMP Timestamp1;
+    TIMESTAMP Timestamp2;
+    ULONG BufferSize = 1 << 23;
+    ULONGLONG OutputBufferSize;
+    //RTL_GENERIC_COMPARE_RESULTS Comparison;
+    ULONG BytesWritten;
+    ULONG CharsWritten;
+    PCHAR Output;
+    PCHAR OutputBuffer;
+    PCBYTE Temp1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
+    PCBYTE Temp2 = "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD";
+    PCBYTE Temp3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!"
+                   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!!";
+    ULONG Lengths[] = {
+        64,
+        128,
+        192,
+        256,
+        384,
+        512,
+        1024,
+        2048,
+        4096,
+        //0,
+        16384,
+        32768,
+        65536,
+        1 << 17,
+        1 << 18,
+        1 << 19,
+        0
+    };
+    PULONG Length;
+
+    ZeroStruct(HistogramA);
+    ZeroStruct(HistogramB);
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ASSERT(OutputHandle);
+
+    OldCodePage = GetConsoleCP();
+
+    ASSERT(SetConsoleCP(20127));
+
+    ASSERT(
+        MakeRandomString(Rtl,
+                         Allocator,
+                         BufferSize,
+                         &Buffer)
+    );
+
+    Success = CreateBuffer(Rtl, NULL, 1, 0, &OutputBufferSize, &OutputBuffer);
+    ASSERT(Success);
+
+    Output = OutputBuffer;
+
+    String.Length = BufferSize;
+    String.Hash = 0;
+    String.Buffer = Buffer;
+
+    QueryPerformanceFrequency(&Frequency);
+
+    INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm  ");
+    INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm");
+
+    OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
+
+    Iterations = 1000;
+    Length = Lengths;
+
+    do {
+        String.Length = *Length;
+
+        RESET_TIMESTAMP(1);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(1);
+            Result = Api->CreateHistogramAvx2AlignedAsm(&String,
+                                                        &HistogramB);
+            END_CYCLES(1);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(1, Length, Iterations);
+
+        RESET_TIMESTAMP(2);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(2);
+            Result = Api->CreateHistogramAvx512AlignedAsm(&String,
+                                                          &HistogramB);
+            END_CYCLES(2);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(2, Length, Iterations);
+
+
+        OUTPUT_FLUSH();
+    } while (*(++Length));
+
+    Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
+
+    OUTPUT_FLUSH();
+
+    ASSERT(SetConsoleCP(OldCodePage));
+
+}
+
 
 extern
 ULONGLONG
@@ -1470,7 +1606,8 @@ mainCRTStartup()
     //Scratch4(Rtl, Allocator, Api);
     //ScratchAvx1();
     //Scratch8();
-    Scratch6(Rtl, Allocator, Api);
+    //Scratch6(Rtl, Allocator, Api);
+    Scratch9(Rtl, Allocator, Api);
 
 Error:
 

@@ -51,6 +51,10 @@ Counts1544   dd   1,  1, 2,  1,  1,  1,  1, 2,  1,  1,  1,  1,  1, 3,  1,  4
 Input1544v2  dd   5,  3, 3,  1,  8,  2, 50, 1,  0,  7,  6,  4,  9, 3, 10,  3
              dd   5,  3, 3,  1,  8,  2, 50, 1,  0,  7,  6,  4,  9, 3, 10,  3
 
+        align   ZMM_ALIGN
+Input1710    db   "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD"
+             db   "ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD"
+
 _DATA$00 ends
 
 CHARACTER_HISTOGRAM struct
@@ -492,7 +496,8 @@ Top:
 Resolve_conflicts:
         vpbroadcastd zmm5, ecx
         kmovw k2, ecx
-        vpermd zmm3{k2}, zmm1, zmm3
+        ; The vpermd doesn't appear to have any effect.
+        ;vpermd zmm3{k2}, zmm1, zmm3
         vpaddd zmm3{k2}, zmm3, zmm0
         vptestmd k0{k2}, zmm5, zmm2
         kmovw esi, k0
@@ -732,6 +737,7 @@ Th199:
         xor     rdx, rdx
 
         lea     r10, Input1544v2
+        ;lea     r10, Input1710
 
         vmovaps zmm0, zmm28
 
@@ -772,7 +778,7 @@ Top:
 Resolve_conflicts:
         vpbroadcastd    zmm5, ecx
         kmovw           k2, ecx
-        vpermd          zmm3 {k2}, zmm1, zmm3
+        ;vpermd          zmm3 {k2}, zmm1, zmm3
         vpaddd          zmm3 {k2}, zmm3, zmm0
         vptestmd        k0 {k2},   zmm5, zmm2
         kmovw           esi, k0
@@ -833,6 +839,174 @@ Th199:
 
 
         NESTED_END Histo1710v2, _TEXT$00
+
+        NESTED_ENTRY Histo1710v3, _TEXT$00
+
+;
+; Begin prologue.  Allocate stack space and save non-volatile registers.
+;
+
+        alloc_stack LOCALS_SIZE
+
+        save_reg    rbp, Locals.SavedRbp        ; Save non-volatile rbp.
+        save_reg    rbx, Locals.SavedRbx        ; Save non-volatile rbx.
+        save_reg    rdi, Locals.SavedRdi        ; Save non-volatile rdi.
+        save_reg    rsi, Locals.SavedRsi        ; Save non-volatile rsi.
+        save_reg    r12, Locals.SavedR12        ; Save non-volatile r12.
+        save_reg    r13, Locals.SavedR13        ; Save non-volatile r13.
+        save_reg    r14, Locals.SavedR14        ; Save non-volatile r14.
+        save_reg    r15, Locals.SavedR15        ; Save non-volatile r15.
+
+        save_xmm128 xmm6, Locals.SavedXmm6      ; Save non-volatile xmm6.
+        save_xmm128 xmm7, Locals.SavedXmm7      ; Save non-volatile xmm7.
+        save_xmm128 xmm8, Locals.SavedXmm8      ; Save non-volatile xmm8.
+        save_xmm128 xmm9, Locals.SavedXmm9      ; Save non-volatile xmm9.
+        save_xmm128 xmm10, Locals.SavedXmm10    ; Save non-volatile xmm10.
+        save_xmm128 xmm11, Locals.SavedXmm11    ; Save non-volatile xmm11.
+        save_xmm128 xmm12, Locals.SavedXmm12    ; Save non-volatile xmm12.
+        save_xmm128 xmm13, Locals.SavedXmm13    ; Save non-volatile xmm13.
+        save_xmm128 xmm14, Locals.SavedXmm14    ; Save non-volatile xmm14.
+        save_xmm128 xmm15, Locals.SavedXmm15    ; Save non-volatile xmm15.
+
+        END_PROLOGUE
+
+        mov     Locals.HomeRcx[rsp], rcx                ; Home rcx.
+        mov     Locals.HomeRdx[rsp], rdx                ; Home rdx.
+        mov     Locals.HomeR8[rsp], r8                  ; Home r8.
+        mov     Locals.HomeR9[rsp], r9                  ; Home r9.
+
+        vmovntdqa       zmm28, zmmword ptr [AllOnes]
+        vmovntdqa       zmm29, zmmword ptr [AllNegativeOnes]
+        vmovntdqa       zmm30, zmmword ptr [AllBinsMinusOne]
+        vmovntdqa       zmm31, zmmword ptr [AllThirtyOne]
+
+        vmovaps         zmm17, zmmword ptr [Permute1544]
+        vmovaps         zmm18, zmmword ptr [Conflict1544]
+        vmovaps         zmm19, zmmword ptr [Counts1544]
+
+        mov             rax, 1111111111111111h
+        kmovq           k1, rax
+        vpmovm2b        zmm1, k1
+
+        mov     rax, rdx
+        xor     rdx, rdx
+
+        ;lea     r10, Input1544v2
+        lea     r10, Input1710
+
+        vmovaps zmm0, zmm28
+
+Top:
+        vmovntdqa   zmm4, zmmword ptr [r10]
+        add         r10, 40h
+
+        vpandd      zmm4, zmm1, zmm4
+
+        vpxord      zmm1, zmm1, zmm1
+
+        kxnorw      k2, k0, k0
+        ;kmovw       k2, k1
+
+        vpconflictd zmm2, zmm4
+
+        vpgatherdd  zmm1 {k2}, [rax+zmm4*4]
+
+        vptestmd    k0, zmm2, zmm29             ; Test against AllNegativeOnes
+
+        kmovw       ecx, k0
+
+        vpaddd      zmm3, zmm1, zmm0
+
+        test        ecx, ecx
+
+        jz          No_conflicts
+
+        ;vptestmd    k0, zmm2, zmm29
+
+        vplzcntd    zmm5, zmm2
+
+        xor         bl, bl
+
+        ;kmovw       ecx, k0
+
+        vpsubd      zmm1, zmm31, zmm5
+
+        jmp         Resolve_conflicts2
+
+Resolve_conflicts:
+        vpbroadcastd    zmm5, ecx
+        kmovw           k2, ecx
+        ;vpermd          zmm3 {k2}, zmm1, zmm3
+        vpaddd          zmm3 {k2}, zmm3, zmm0
+        vptestmd        k0 {k2},   zmm5, zmm2
+        kmovw           esi, k0
+        and             ecx, esi
+        jz              No_conflicts
+
+        add             bl, 1h
+        cmp             bl, 10h
+        jb              Resolve_conflicts
+
+Resolve_conflicts2:
+        vpbroadcastd    zmm5, ecx
+        kmovw           k2, ecx
+;       vpermd          zmm3 {k2}, zmm1, zmm3
+        vpaddd          zmm3 {k2}, zmm3, zmm0
+        vptestmd        k0 {k2},   zmm5, zmm2
+        kmovw           esi, k0
+        and             ecx, esi
+        jnz             Resolve_conflicts2
+
+No_conflicts:
+        ;kmovw           k2, k1
+        ;vpscatterdd     [rax+zmm4*4]{k2}, zmm3
+        kxnorw          k2, k0, k0
+        vpscatterdd     [rax+zmm4*4]{k2}, zmm3
+        add             edx, 10h
+        cmp             edx, 20h
+        jb              Top
+
+
+;
+; Indicate success.
+;
+
+        mov rax, 1
+
+;
+; Restore non-volatile registers.
+;
+
+Th199:
+        mov             rbp,   Locals.SavedRbp[rsp]
+        mov             rbx,   Locals.SavedRbx[rsp]
+        mov             rdi,   Locals.SavedRdi[rsp]
+        mov             rsi,   Locals.SavedRsi[rsp]
+        mov             r12,   Locals.SavedR12[rsp]
+        mov             r13,   Locals.SavedR13[rsp]
+        mov             r14,   Locals.SavedR14[rsp]
+        mov             r15,   Locals.SavedR15[rsp]
+
+        movdqa          xmm6,  Locals.SavedXmm6[rsp]
+        movdqa          xmm7,  Locals.SavedXmm7[rsp]
+        movdqa          xmm8,  Locals.SavedXmm8[rsp]
+        movdqa          xmm9,  Locals.SavedXmm9[rsp]
+        movdqa          xmm10, Locals.SavedXmm10[rsp]
+        movdqa          xmm11, Locals.SavedXmm11[rsp]
+        movdqa          xmm12, Locals.SavedXmm12[rsp]
+        movdqa          xmm13, Locals.SavedXmm13[rsp]
+        movdqa          xmm14, Locals.SavedXmm14[rsp]
+        movdqa          xmm15, Locals.SavedXmm15[rsp]
+
+;
+; Begin epilogue.  Deallocate stack space and return.
+;
+
+        add     rsp, LOCALS_SIZE
+        ret
+
+
+        NESTED_END Histo1710v3, _TEXT$00
 
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :

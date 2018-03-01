@@ -134,11 +134,11 @@ Locals struct
 
     SavedR15                dq      ?
 
-    ReturnAddress   dq  ?
-    HomeRcx         dq  ?
-    HomeRdx         dq  ?
-    HomeR8          dq  ?
-    HomeR9          dq  ?
+    ReturnAddress           dq  ?
+    HomeRcx                 dq  ?
+    HomeRdx                 dq  ?
+    HomeR8                  dq  ?
+    HomeR9                  dq  ?
 Locals ends
 
 ;
@@ -543,7 +543,6 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
 ;
 
         add             rdx, 40h                    ; Advance 64 bytes.
-        kxnorq          k1, k2, k2                  ; Clear k1.
 
 ;
 ; Extract byte values for each doubleword into separate registers.
@@ -590,12 +589,12 @@ Chb30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
         vpconflictd     zmm12, zmm7
         vpconflictd     zmm13, zmm8
 
-        vpord          zmm14, zmm10, zmm11
-        vpord          zmm15, zmm12, zmm13
-        vpord          zmm14, zmm14, zmm15
+        vpord           zmm14, zmm10, zmm11
+        vpord           zmm15, zmm12, zmm13
+        vpord           zmm14, zmm14, zmm15
 
-        vptestmq        k1, zmm14, zmm14            ; Any conflicts anywhere?
-        kortestq        k1, k1
+        vptestmd        k1, zmm14, zmm14            ; Any conflicts anywhere?
+        kortestw        k1, k1
         jne             Chb40                       ; At least one conflict.
 
 
@@ -647,168 +646,153 @@ Chb38:  sub             ecx, 1                          ; Decrement counter.
 ; Conflict handling logic.  At least one of the zmm registers had a conflict.
 ;
 
-Chb40:  vptestmd        k1, zmm10, zmm10
 
-        kortestw        k1, k1                      ; Check 1st for conflicts.
-        jne             Chb42                       ; 1st block has conflicts.
-        jmp             Chb51                       ; No conflicts, test 2nd.
+;
+; Test the first register (zmm5) to see if it has any conflicts (zmm10).
+;
+
+Chb40:  vptestmd        k1, zmm10, zmm10            ; Test 1st for conflicts.
+        vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
+        kmovw           ebx, k1                     ; Move mask into ebx.
+        vpaddd          zmm16, zmm16, zmm20         ; Add partial counts.
+        test            ebx, ebx                    ; Any conflicts?
+        jz              short Chb47                 ; No conflicts.
 
 ;
 ; First register (zmm5) has a conflict (zmm10).
 ;
 
-Chb42:  vplzcntd        zmm9, zmm10                 ; Count leading zeros.
-        vpsubd          zmm19, zmm31, zmm9          ; Subtract 31 from elems.
-        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
-
-
-        vmovaps         zmm18, zmm0
-        vpternlogd      zmm0 {k0}, zmm0, zmm0, 255
-        vmovaps          zmm0, zmm18
-
-
-Chb45:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
-        vpermd          zmm19 {k1},     zmm19, zmm19
-        vpaddd          zmm12 {k1},     zmm12, zmm18
-        vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        kortestw        k1, k1
-        jne             Chb45
+        align           16
+Chb45:  vpbroadcastd    zmm18, ebx                  ; Bcast mask into zmm18.
+        kmovw           k1, ebx                     ; Move mask into k1.
+        vpaddd          zmm16 {k1}, zmm16, zmm28    ; Add masked counts.
+        vptestmd        k0 {k1}, zmm18, zmm10       ; Test against conflict.
+        kmovw           esi, k0                     ; Move new mask into esi.
+        and             ebx, esi                    ; Mask off recent bit.
+        jnz             short Chb45                 ; Continue loop if bits left
 
 ;
-; Conflicts have been resolved for first register (zmm5), with the partial
-; counts now living in zmm12.  Add to the existing counts (zmm20) and scatter
-; back to memory.
+; Conflicts have been resolved for first register (zmm5), with the final count
+; now living in zmm16.  Scatter back to memory.
 ;
 
-Chb47:  vpaddd          zmm12, zmm12, zmm20         ; Add partial counts.
-        kxnorw          k1, k1, k1                  ; Set all bits in writemask.
-        vpscatterdd     [r8+4*zmm5] {k1}, zmm12     ; Save counts.
+Chb47:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpscatterdd     [r8+4*zmm5] {k7}, zmm16     ; Save counts.
 
 ;
 ; Intentional follow-on.
 ;
 
 ;
-; Test the second register (zmm6) for conflicts.
+; Test the second register (zmm6) to see if it has any conflicts (zmm11).
 ;
 
-Chb51:  vptestmd        k2, zmm11, zmm11
-        kortestw        k2, k2                      ; Test for 2nd conflicts.
-        jne             Chb52                       ; 2nd block has conflicts.
-        jmp             Chb61                       ; No conflicts, test 3rd.
+Chb50:  vptestmd        k1, zmm11, zmm11            ; Test 2nd for conflicts.
+        vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
+        kmovw           ebx, k1                     ; Move mask into ebx.
+        vpaddd          zmm16, zmm16, zmm21         ; Add partial counts.
+        test            ebx, ebx                    ; Any conflicts?
+        jz              short Chb57                 ; No conflicts.
 
 ;
 ; Second register (zmm6) has a conflict (zmm11).
 ;
 
-Chb52:  vplzcntd        zmm9, zmm11                 ; Count leading zeros.
-        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
-        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
-
         align           16
-
-Chb55:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
-        vpermd          zmm19 {k1},     zmm19, zmm19
-        vpaddd          zmm12 {k1},     zmm12, zmm18
-        vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        kortestw        k1, k1
-        jne             Chb55
+Chb55:  vpbroadcastd    zmm18, ebx                  ; Bcast mask into zmm18.
+        kmovw           k1, ebx                     ; Move mask into k1.
+        vpaddd          zmm16 {k1}, zmm16, zmm28    ; Add masked counts.
+        vptestmd        k0 {k1}, zmm18, zmm11       ; Test against conflict.
+        kmovw           esi, k0                     ; Move new mask into esi.
+        and             ebx, esi                    ; Mask off recent bit.
+        jnz             short Chb55                 ; Continue loop if bits left
 
 ;
-; Conflicts have been resolved for second register (zmm6), with the partial
-; counts now living in zmm12.  Add to the existing counts (zmm21) and scatter
-; back to memory.
+; Conflicts have been resolved for second register (zmm6), with the final count
+; now living in zmm16.  Scatter back to memory.
 ;
 
-        vpaddd          zmm12, zmm12, zmm21         ; Add partial counts.
-        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
-        vpscatterdd     [r8+4*zmm6] {k1}, zmm12     ; Save counts.
+Chb57:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpscatterdd     [r9+4*zmm6] {k7}, zmm16     ; Save counts.
 
 ;
 ; Intentional follow-on.
 ;
 
 ;
-; Test the third register (zmm7) for conflicts.
+; Test the third register (zmm7) to see if it has any conflicts (zmm16).
 ;
 
-Chb61:  vptestmd        k3, zmm12, zmm12
-        kortestw        k3, k3                      ; Test for 3rd conflicts.
-        jne             Chb62                       ; 3rd block has conflicts.
-        jmp             Chb71                       ; No conflicts, must be 4th.
+Chb60:  vptestmd        k1, zmm12, zmm12            ; Test 3rd for conflicts.
+        vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
+        kmovw           ebx, k1                     ; Move mask into ebx.
+        vpaddd          zmm16, zmm16, zmm22         ; Add partial counts.
+        test            ebx, ebx                    ; Any conflicts?
+        jz              short Chb67                 ; No conflicts.
 
 ;
-; Third register (zmm7) has a conflict (zmm12)
+; Third register (zmm7) has a conflict (zmm16).
 ;
-
-Chb62:  vplzcntd        zmm9, zmm12                 ; Count leading zeros.
-        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
-        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
 
         align           16
-
-Chb65:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
-        vpermd          zmm19 {k1},     zmm19, zmm19
-        vpaddd          zmm12 {k1},     zmm12, zmm18
-        vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        kortestw        k1, k1
-        jne             Chb65
+Chb65:  vpbroadcastd    zmm18, ebx                  ; Bcast mask into zmm18.
+        kmovw           k1, ebx                     ; Move mask into k1.
+        vpaddd          zmm16 {k1}, zmm16, zmm28    ; Add masked counts.
+        vptestmd        k0 {k1}, zmm18, zmm12       ; Test against conflict.
+        kmovw           esi, k0                     ; Move new mask into esi.
+        and             ebx, esi                    ; Mask off recent bit.
+        jnz             short Chb65                 ; Continue loop if bits left
 
 ;
-; Conflicts have been resolved for third register (zmm7), with the partial
-; counts now living in zmm12.  Add to the existing counts (zmm22) and scatter
-; back to memory.
+; Conflicts have been resolved for third register (zmm7), with the final count
+; now living in zmm16.  Scatter back to memory.
 ;
 
-        vpaddd          zmm12, zmm12, zmm22         ; Add partial counts.
-        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
-        vpscatterdd     [r8+4*zmm7] {k1}, zmm12     ; Save counts.
+Chb67:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpscatterdd     [r10+4*zmm7] {k7}, zmm16    ; Save counts.
 
 ;
 ; Intentional follow-on.
 ;
 
 ;
-; Test the fourth register (zmm8) for conflicts.
+; Test the second register (zmm8) to see if it has any conflicts (zmm13).
 ;
 
-Chb71:  vptestmd        k4, zmm13, zmm13
-        kortestw        k4, k4                      ; Test for 4th conflicts.
-        jne             Chb72                       ; 4th block has conflicts.
-        jmp             Chb38                       ; No conflicts, we're done.
+Chb70:  vptestmd        k1, zmm13, zmm13            ; Test 4th for conflicts.
+        vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
+        kmovw           ebx, k1                     ; Move mask into ebx.
+        vpaddd          zmm16, zmm16, zmm23         ; Add partial counts.
+        test            ebx, ebx                    ; Any conflicts?
+        jz              short Chb77                 ; No conflicts.
 
 ;
-; Forth register (zmm8) has a conflict (zmm13)
+; Fourth register (zmm8) has a conflict (zmm13).
 ;
-
-Chb72:  vplzcntd        zmm9, zmm13                 ; Count leading zeros.
-        vpsubd          zmm19, zmm9, zmm31          ; Subtract 31 from elems.
-        vmovaps         zmm12, zmm28                ; Copy AllOnes into zmm12.
 
         align           16
-
-Chb75:  vpermd          zmm18 {k1} {z}, zmm12, zmm19
-        vpermd          zmm19 {k1},     zmm19, zmm19
-        vpaddd          zmm12 {k1},     zmm12, zmm18
-        vpcmpd          k1, zmm29, zmm19, OP_NEQ
-        kortestw        k1, k1
-        jne             Chb75
-
-;
-; Conflicts have been resolved for fourth register (zmm8), with the partial
-; counts now living in zmm12.  Add to the existing counts (zmm23) and scatter
-; back to memory.
-;
-
-        vpaddd          zmm12, zmm12, zmm23         ; Add partial counts.
-        kxnorq          k1, k5, k5                  ; Set all bits in writemask.
-        vpscatterdd     [r8+4*zmm8] {k1}, zmm12     ; Save counts.
+Chb75:  vpbroadcastd    zmm18, ebx                  ; Bcast mask into zmm18.
+        kmovw           k1, ebx                     ; Move mask into k1.
+        vpaddd          zmm16 {k1}, zmm16, zmm28    ; Add masked counts.
+        vptestmd        k0 {k1}, zmm18, zmm13       ; Test against conflict.
+        kmovw           esi, k0                     ; Move new mask into esi.
+        and             ebx, esi                    ; Mask off recent bit.
+        jnz             short Chb75                 ; Continue loop if bits left
 
 ;
-; Jump back to loop processing.
+; Conflicts have been resolved for second register (zmm8), with the final count
+; now living in zmm16.  Scatter back to memory.
 ;
 
-        jmp Chb38
+Chb77:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpscatterdd     [r11+4*zmm8] {k7}, zmm16    ; Save counts.
+
+;
+; Check for loop termination.
+;
+
+        sub             ecx, 1                          ; Decrement counter.
+        jnz             Chb30                           ; Continue if != 0.
 
 ;
 ; Merge four histograms into one, 128 bytes at a time (two zmm registers in
