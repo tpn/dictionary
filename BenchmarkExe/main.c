@@ -41,6 +41,36 @@ static const PCBYTE QuickLazy = \
     }
 #endif
 
+extern
+BOOLEAN
+Histo1544(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+
+extern
+BOOLEAN
+Histo1544v2(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+
+
+extern
+BOOLEAN
+Histo1710(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+
+extern
+BOOLEAN
+Histo1710v2(
+    PCLONG_STRING String,
+    PCHARACTER_HISTOGRAM_V4 Histogram
+    );
+
+
 VOID
 Scratch2(
     PRTL Rtl,
@@ -1265,6 +1295,10 @@ Scratch6(
 
     CopyMemory(String.Buffer, Temp2, 64);
     //String.Buffer = (PBYTE)QuickLazy;
+
+    //Result = Histo1544v2(&String, &HistogramB);
+    //Result = Histo1710(&String, &HistogramB);
+    Result = Histo1710v2(&String, &HistogramB);
 
     Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                   &HistogramB);
