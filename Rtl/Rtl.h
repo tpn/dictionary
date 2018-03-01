@@ -359,6 +359,7 @@ extern "C" {
 
 #define TRY_TSX __try
 #define TRY_AVX __try
+#define TRY_AVX512 __try
 #define TRY_AVX_ALIGNED __try
 #define TRY_AVX_UNALIGNED __try
 
