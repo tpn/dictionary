@@ -1,0 +1,218 @@
+Intel(R) Architecture Code Analyzer Version -  v3.0-28-g1ba2cbb build date: 2017-10-23;17:30:24
+Analyzed File -  x64\Release\Dictionary.dll
+Binary Format - 64Bit
+Architecture  -  SKX
+Analysis Type - Throughput
+
+Throughput Analysis Report
+--------------------------
+Block Throughput: 236.00 Cycles       Throughput Bottleneck: Backend
+Loop Count:  22
+Port Binding In Cycles Per Iteration:
+--------------------------------------------------------------------------------------------------
+|  Port  |   0   -  DV   |   1   |   2   -  D    |   3   -  D    |   4   |   5   |   6   |   7   |
+--------------------------------------------------------------------------------------------------
+| Cycles | 117.0     0.0  | 15.0  | 115.5    50.1  | 115.5    49.9  | 131.0  | 117.0  | 23.0  |  0.0  |
+--------------------------------------------------------------------------------------------------
+
+DV - Divider pipe (on port 0)
+D - Data fetch pipe (on ports 2 and 3)
+F - Macro Fusion with the previous instruction occurred
+* - instruction micro-ops not bound to a port
+^ - Micro Fusion occurred
+# - ESP Tracking sync uop was issued
+@ - SSE instruction followed an AVX256/AVX512 instruction, dozens of cycles penalty is expected
+X - instruction not supported, was not accounted in Analysis
+
+| Num Of   |                    Ports pressure in cycles                         |      |
+|  Uops    |  0  - DV    |  1   |  2  -  D    |  3  -  D    |  4   |  5   |  6   |  7   |
+-----------------------------------------------------------------------------------------
+|   1*     |             |      |             |             |      |      |      |      | xor rax, rax
+|   1*     |             |      |             |             |      |      |      |      | test rcx, rcx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x384
+|   1*     |             |      |             |             |      |      |      |      | test rdx, rdx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x37b
+|   1      |             | 1.0  |             |             |      |      |      |      | mov r9, 0x40
+|   2^     |             | 1.0  | 0.5     0.5 | 0.5     0.5 |      |      |      |      | cmp dword ptr [rcx], r9d
+|   0*F    |             |      |             |             |      |      |      |      | jl 0x36b
+|   1      |             | 1.0  |             |             |      |      |      |      | mov r9, 0x1f
+|   2^     |             | 1.0  | 0.5     0.5 | 0.5     0.5 |      |      |      |      | test qword ptr [rcx+0x8], r9
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0x35a
+|   1*     |             |      |             |             |      |      |      |      | mov r8, rdx
+|   1      |             | 1.0  |             |             |      |      |      |      | lea r9, ptr [r8+0x400]
+|   1      |             | 1.0  |             |             |      |      |      |      | lea r10, ptr [r8+0x800]
+|   1      |             | 1.0  |             |             |      |      |      |      | lea r11, ptr [r8+0xc00]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov rdx, qword ptr [rcx+0x8]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov ecx, dword ptr [rcx]
+|   1      |             |      |             |             |      |      | 1.0  |      | shr ecx, 0x6
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovntdqa zmm28, zmmword ptr [rip+0x30a8]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovntdqa zmm29, zmmword ptr [rip+0x30de]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovntdqa zmm30, zmmword ptr [rip+0x3114]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovntdqa zmm31, zmmword ptr [rip+0x314a]
+|   1      |             | 1.0  |             |             |      |      |      |      | mov rax, 0x1111111111111111
+|   1      |             |      |             |             |      | 1.0  |      |      | kmovq k1, rax
+|   0X     |             |      |             |             |      |      |      |      | vpmovm2b zmm1, k1
+|   1      |             |      |             |             |      | 1.0  |      |      | kshiftlq k2, k1, 0x1
+|   0X     |             |      |             |             |      |      |      |      | vpmovm2b zmm2, k2
+|   1      |             |      |             |             |      | 1.0  |      |      | kshiftlq k3, k1, 0x2
+|   0X     |             |      |             |             |      |      |      |      | vpmovm2b zmm3, k3
+|   1      |             |      |             |             |      | 1.0  |      |      | kshiftlq k4, k1, 0x3
+|   0X     |             |      |             |             |      |      |      |      | vpmovm2b zmm4, k4
+|   1      |             | 1.0  |             |             |      |      |      |      | nop 
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovntdqa zmm0, zmmword ptr [rdx]
+|   1      |             | 1.0  |             |             |      |      |      |      | add rdx, 0x40
+|   2^     |             |      | 0.5         | 0.5         | 1.0  |      |      |      | mov byte ptr gs:[0x6f], 0x6f
+|   1      | 1.0         |      |             |             |      |      |      |      | vpandd zmm5, zmm1, zmm0
+|   1      | 1.0         |      |             |             |      |      |      |      | vpandd zmm6, zmm2, zmm0
+|   1      | 1.0         |      |             |             |      |      |      |      | vpandd zmm7, zmm3, zmm0
+|   1      | 1.0         |      |             |             |      |      |      |      | vpandd zmm8, zmm4, zmm0
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k1, k5, k5
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k2, k6, k6
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k3, k7, k7
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k4, k0, k0
+|   1      |             |      |             |             |      | 1.0  |      |      | vpsrldq zmm6, zmm6, 0x1
+|   1      |             |      |             |             |      | 1.0  |      |      | vpsrldq zmm7, zmm7, 0x2
+|   1      |             |      |             |             |      | 1.0  |      |      | vpsrldq zmm8, zmm8, 0x3
+|   5^     | 1.0         |      | 8.0     8.0 | 8.0     8.0 |      | 1.0  | 1.0  |      | vpgatherdd zmm20, k1, zmmword ptr [r8+zmm5*4]
+|   5^     | 1.0         |      | 8.0     8.0 | 8.0     8.0 |      | 1.0  | 1.0  |      | vpgatherdd zmm21, k2, zmmword ptr [r9+zmm6*4]
+|   5^     | 1.0         |      | 8.0     8.0 | 8.0     8.0 |      | 1.0  | 1.0  |      | vpgatherdd zmm22, k3, zmmword ptr [r10+zmm7*4]
+|   5^     | 1.0         |      | 8.0     8.0 | 8.0     8.0 |      | 1.0  | 1.0  |      | vpgatherdd zmm23, k4, zmmword ptr [r11+zmm8*4]
+|  35      | 17.0        |      |             |             |      | 18.0 |      |      | vpconflictd zmm10, zmm5
+|  35      | 17.0        |      |             |             |      | 18.0 |      |      | vpconflictd zmm11, zmm6
+|  35      | 18.0        |      |             |             |      | 17.0 |      |      | vpconflictd zmm12, zmm7
+|  35      | 17.0        |      |             |             |      | 18.0 |      |      | vpconflictd zmm13, zmm8
+|   1      | 1.0         |      |             |             |      |      |      |      | vpord zmm14, zmm10, zmm11
+|   1      | 1.0         |      |             |             |      |      |      |      | vpord zmm15, zmm12, zmm13
+|   1      |             |      |             |             |      | 1.0  |      |      | vpord zmm14, zmm14, zmm15
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k1, zmm14, zmm14
+|   1      | 1.0         |      |             |             |      |      |      |      | kortestw k1, k1
+|   1      |             |      |             |             |      |      | 1.0  |      | jnz 0x62
+|   0X     |             |      |             |             |      |      |      |      | nop word ptr [rax+rax*1], ax
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm24, zmm20, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm25, zmm21, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm26, zmm22, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm27, zmm23, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k1, k5, k5
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k2, k6, k6
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k3, k7, k7
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorq k4, k0, k0
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r8+zmm5*4], k1, zmm24
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r9+zmm6*4], k2, zmm25
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r10+zmm7*4], k3, zmm26
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r11+zmm8*4], k4, zmm27
+|   1*     |             |      |             |             |      |      |      |      | sub ecx, 0x1
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffff05
+|   1      |             |      |             |             |      |      | 1.0  |      | jmp 0x141
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k1, zmm10, zmm10
+|   1*     |             |      |             |             |      |      |      |      | vmovaps zmm16, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw ebx, k1
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm16, zmm16, zmm20
+|   1*     |             |      |             |             |      |      |      |      | test ebx, ebx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x20
+|   1      |             |      |             |             |      | 1.0  |      |      | vpbroadcastd zmm18, ebx
+|   1      |             |      |             |             |      | 1.0  |      |      | kmovw k1, ebx
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm16{k1}, zmm16, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k0{k1}, zmm18, zmm10
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw esi, k0
+|   1*     |             |      |             |             |      |      |      |      | and ebx, esi
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffffe4
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorw k7, k3, k3
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r8+zmm5*4], k7, zmm16
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k1, zmm11, zmm11
+|   1*     |             |      |             |             |      |      |      |      | vmovaps zmm16, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw ebx, k1
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm16, zmm16, zmm21
+|   1*     |             |      |             |             |      |      |      |      | test ebx, ebx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x2d
+|   0X     |             |      |             |             |      |      |      |      | nop word ptr [rax+rax*1], ax
+|   1      |             |      |             |             |      | 1.0  |      |      | vpbroadcastd zmm18, ebx
+|   1      |             |      |             |             |      | 1.0  |      |      | kmovw k1, ebx
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm16{k1}, zmm16, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k0{k1}, zmm18, zmm11
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw esi, k0
+|   1*     |             |      |             |             |      |      |      |      | and ebx, esi
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffffe4
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorw k7, k3, k3
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r9+zmm6*4], k7, zmm16
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k1, zmm12, zmm12
+|   1*     |             |      |             |             |      |      |      |      | vmovaps zmm16, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw ebx, k1
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm16, zmm16, zmm22
+|   1*     |             |      |             |             |      |      |      |      | test ebx, ebx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x2d
+|   0X     |             |      |             |             |      |      |      |      | nop word ptr [rax+rax*1], ax
+|   1      |             |      |             |             |      | 1.0  |      |      | vpbroadcastd zmm18, ebx
+|   1      |             |      |             |             |      | 1.0  |      |      | kmovw k1, ebx
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm16{k1}, zmm16, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k0{k1}, zmm18, zmm12
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw esi, k0
+|   1*     |             |      |             |             |      |      |      |      | and ebx, esi
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffffe4
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorw k7, k3, k3
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r10+zmm7*4], k7, zmm16
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k1, zmm13, zmm13
+|   1*     |             |      |             |             |      |      |      |      | vmovaps zmm16, zmm28
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw ebx, k1
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm16, zmm16, zmm23
+|   1*     |             |      |             |             |      |      |      |      | test ebx, ebx
+|   0*F    |             |      |             |             |      |      |      |      | jz 0x2d
+|   0X     |             |      |             |             |      |      |      |      | nop word ptr [rax+rax*1], ax
+|   1      |             |      |             |             |      | 1.0  |      |      | vpbroadcastd zmm18, ebx
+|   1      |             |      |             |             |      | 1.0  |      |      | kmovw k1, ebx
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm16{k1}, zmm16, zmm28
+|   1      |             |      |             |             |      | 1.0  |      |      | vptestmd k0{k1}, zmm18, zmm13
+|   1      | 1.0         |      |             |             |      |      |      |      | kmovw esi, k0
+|   1*     |             |      |             |             |      |      |      |      | and ebx, esi
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffffe4
+|   1      | 1.0         |      |             |             |      |      |      |      | kxnorw k7, k3, k3
+|  36      | 1.0         |      | 8.0         | 8.0         | 16.0 | 1.0  | 2.0  |      | vpscatterdd zmmword ptr [r11+zmm8*4], k7, zmm16
+|   1*     |             |      |             |             |      |      |      |      | sub ecx, 0x1
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xfffffffffffffdc4
+|   1      |             | 1.0  |             |             |      |      |      |      | mov ecx, 0x8
+|   1*     |             |      |             |             |      |      |      |      | xor rax, rax
+|   0X     |             |      |             |             |      |      |      |      | nop word ptr [rax+rax*1], ax
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm20, zmmword ptr [r8+rax*1]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm21, zmmword ptr [r8+rax*1+0x40]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm22, zmmword ptr [r9+rax*1]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm23, zmmword ptr [r9+rax*1+0x40]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm24, zmmword ptr [r10+rax*1]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm25, zmmword ptr [r10+rax*1+0x40]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm26, zmmword ptr [r11+rax*1]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | vmovdqa32 zmm27, zmmword ptr [r11+rax*1+0x40]
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm10, zmm20, zmm22
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm11, zmm24, zmm26
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm12, zmm10, zmm11
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm13, zmm21, zmm23
+|   1      | 1.0         |      |             |             |      |      |      |      | vpaddd zmm14, zmm25, zmm27
+|   1      |             |      |             |             |      | 1.0  |      |      | vpaddd zmm15, zmm13, zmm14
+|   2      |             |      | 0.5         | 0.5         | 1.0  |      |      |      | vmovdqa32 zmmword ptr [r8+rax*1], zmm12
+|   2      |             |      | 0.5         | 0.5         | 1.0  |      |      |      | vmovdqa32 zmmword ptr [r8+rax*1+0x40], zmm15
+|   1      |             | 1.0  |             |             |      |      |      |      | add rax, 0x80
+|   1*     |             |      |             |             |      |      |      |      | sub ecx, 0x1
+|   0*F    |             |      |             |             |      |      |      |      | jnz 0xffffffffffffff88
+|   1      |             | 1.0  |             |             |      |      |      |      | mov rax, 0x1
+|   1#     |             | 1.0  | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov rbp, qword ptr [rsp+0x8]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov rbx, qword ptr [rsp+0x10]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov rdi, qword ptr [rsp+0x18]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov rsi, qword ptr [rsp+0x20]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov r12, qword ptr [rsp+0x28]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov r13, qword ptr [rsp+0x30]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov r14, qword ptr [rsp+0x38]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | mov r15, qword ptr [rsp+0xe0]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm6, xmmword ptr [rsp+0x40]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm7, xmmword ptr [rsp+0x50]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm8, xmmword ptr [rsp+0x60]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm9, xmmword ptr [rsp+0x70]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm10, xmmword ptr [rsp+0x80]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm11, xmmword ptr [rsp+0x90]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm12, xmmword ptr [rsp+0xa0]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm13, xmmword ptr [rsp+0xb0]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm14, xmmword ptr [rsp+0xc0]
+|   1      |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | movdqa xmm15, xmmword ptr [rsp+0xd0]
+|   1      |             | 1.0  |             |             |      |      |      |      | add rsp, 0xe8
+|   3^     |             |      | 0.5     0.5 | 0.5     0.5 |      |      |      |      | ret 
+Total Num Of Uops: 599
+Analysis Notes:
+There was an unsupported instruction(s), it was not accounted in Analysis.
+Backend allocation was stalled due to unavailable allocation resources.
+There were bubbles in the frontend.
