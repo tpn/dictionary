@@ -17,6 +17,14 @@ EXPORTS
     CreateHistogramAvx2AlignedCV4
     CreateHistogramAvx2AlignedC32
     CreateHistogramAvx2AlignedAsm
+    CreateHistogramAvx2AlignedAsm_v2
+    CreateHistogramAvx2AlignedAsm_v3
+    CreateHistogramAvx2AlignedAsm_v4
+    CreateHistogramAvx2AlignedAsm_v5
+    CreateHistogramAvx2AlignedAsm_v5_2
+    CreateHistogramAvx2AlignedAsm_v5_3
+    CreateHistogramAvx2AlignedAsm_v5_3_2
+    CreateHistogramAvx2AlignedAsm_v5_3_3
     CreateHistogramAvx512AlignedAsm
     CreateHistogramAvx512AlignedAsm_v2
     CompareHistograms=CompareHistogramsAlignedAvx2

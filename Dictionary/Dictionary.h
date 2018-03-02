@@ -466,6 +466,14 @@ typedef struct _DICTIONARY_FUNCTIONS {
     PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC32;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v2;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v3;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v4;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v5;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v5_2;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v5_3;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v5_3_2;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedAsm_v5_3_3;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx2AlignedCV4;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v2;
@@ -512,6 +520,14 @@ LoadDictionaryModule(
         "CreateHistogramAvx2AlignedC",
         "CreateHistogramAvx2AlignedC32",
         "CreateHistogramAvx2AlignedAsm",
+        "CreateHistogramAvx2AlignedAsm_v2",
+        "CreateHistogramAvx2AlignedAsm_v3",
+        "CreateHistogramAvx2AlignedAsm_v4",
+        "CreateHistogramAvx2AlignedAsm_v5",
+        "CreateHistogramAvx2AlignedAsm_v5_2",
+        "CreateHistogramAvx2AlignedAsm_v5_3",
+        "CreateHistogramAvx2AlignedAsm_v5_3_2",
+        "CreateHistogramAvx2AlignedAsm_v5_3_3",
         "CreateHistogramAvx2AlignedCV4",
         "CreateHistogramAvx512AlignedAsm",
         "CreateHistogramAvx512AlignedAsm_v2",
