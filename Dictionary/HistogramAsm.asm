@@ -3438,9 +3438,8 @@ Chc38:  sub             ecx, 1                          ; Decrement counter.
 
 Chc40:  vptestmd        k1, zmm10, zmm10            ; Test 1st for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        kmovw           ebx, k1                     ; Move mask into ebx.
         vpaddd          zmm16, zmm16, zmm20         ; Add partial counts.
-        test            ebx, ebx                    ; Any conflicts?
+        kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc47                 ; No conflicts.
 
 ;
@@ -3477,9 +3476,8 @@ Chc47:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 
 Chc50:  vptestmd        k1, zmm11, zmm11            ; Test 2nd for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        kmovw           ebx, k1                     ; Move mask into ebx.
         vpaddd          zmm16, zmm16, zmm21         ; Add partial counts.
-        test            ebx, ebx                    ; Any conflicts?
+        kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc57                 ; No conflicts.
 
 ;
@@ -3516,9 +3514,8 @@ Chc57:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 
 Chc60:  vptestmd        k1, zmm12, zmm12            ; Test 3rd for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        kmovw           ebx, k1                     ; Move mask into ebx.
         vpaddd          zmm16, zmm16, zmm22         ; Add partial counts.
-        test            ebx, ebx                    ; Any conflicts?
+        kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc67                 ; No conflicts.
 
 
@@ -3556,9 +3553,8 @@ Chc67:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 
 Chc70:  vptestmd        k1, zmm13, zmm13            ; Test 4th for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        kmovw           ebx, k1                     ; Move mask into ebx.
         vpaddd          zmm16, zmm16, zmm23         ; Add partial counts.
-        test            ebx, ebx                    ; Any conflicts?
+        kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc77                 ; No conflicts.
 
 ;
