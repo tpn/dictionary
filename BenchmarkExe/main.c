@@ -1562,6 +1562,7 @@ Scratch6(
     CopyMemory(String.Buffer, Temp2, 64);
     //String.Buffer = (PBYTE)QuickLazy;
 
+    Result = Histo1544(&String, &HistogramB);
     //Result = Histo1544v2(&String, &HistogramB);
     //Result = Histo1710(&String, &HistogramB);
     //Result = Histo1710v3(&String, &HistogramB);
@@ -1881,9 +1882,9 @@ mainCRTStartup()
     //Scratch4(Rtl, Allocator, Api);
     //ScratchAvx1();
     //Scratch8();
-    //Scratch6(Rtl, Allocator, Api);
+    Scratch6(Rtl, Allocator, Api);
     //Scratch9(Rtl, Allocator, Api);
-    Scratch5(Rtl, Allocator, Api);
+    //Scratch5(Rtl, Allocator, Api);
 
 Error:
 

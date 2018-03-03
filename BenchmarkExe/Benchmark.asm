@@ -270,45 +270,85 @@ Scr99:
         vmovaps zmm6, zmmword ptr [AllThirtyOne]    ;all_31
         vmovaps zmm7, zmmword ptr [AllBinsMinusOne] ;all_bins_minus_1
 
+        vmovaps zmm10, zmmword ptr [Permute1544]
+        vmovaps zmm11, zmmword ptr [Conflict1544]
+        vmovaps zmm12, zmmword ptr [Counts1544]
+
         mov ebx, 16             ;num_inputs
         xor rcx, rcx
 
-        lea r10, Input1544      ; Load input buffer address. (mov r10, pInput)
+        lea r10, Input1544      ; Load input buffer address.
         ;mov r10, pInput
 
-        mov r15, rdx            ; Load first histo buffer. (mov r10, pInput)
+        mov r15, rdx            ; Load first histo buffer.
         ;mov r15, pHistogram
 
-histogram_loop:
-        vpandd zmm10, zmm7, [r10+rcx*4] ;[rcx+4*r10], zmm7              ; r10*rcx+4
-        vmovntdqa zmm3, zmmword ptr [r10]     ; Load 64 bytes into zmm0.
-        vpconflictd zmm0, zmm3
-        kxnorw k1, k1, k1
-        vmovaps zmm2, zmm4
-        vpxord zmm1, zmm1, zmm1
-        vpgatherdd zmm1{k1}, [r15+zmm3*4]
-        vptestmd k1, zmm0, zmm0
-        kortestw k1, k1
-        je update
+        kxnorw          k7, k0, k0
 
-        vplzcntd zmm0, zmm0
-        vpsubd zmm0, zmm6, zmm0
+histogram_loop:
+        ;vpandd zmm10, zmm7, [r10+rcx*4] ;[rcx+4*r10], zmm7              ; r10*rcx+4
+
+        vmovntdqa       zmm3, zmmword ptr [r10]     ; Load 64 bytes into zmm0.
+        vpconflictd     zmm0, zmm3
+        kxnorw          k1, k1, k1
+
+        vmovaps         zmm2, zmm4
+        vmovaps         zmm8, zmm4
+
+        vpxord          zmm1, zmm1, zmm1
+        ;vpxord          zmm8, zmm8, zmm8
+
+        vpgatherdd      zmm1 {k1}, [r15+zmm3*4]
+        vptestmd        k1, zmm0, zmm0
+        kortestw        k1, k1
+        je              short update
+
+        vmovaps         zmm20, zmm0
+        vplzcntd        zmm0, zmm0
+        vmovaps         zmm21, zmm0
+        vpsubd          zmm0, zmm6, zmm0
+        ;jmp             conflict_loop
 
 conflict_loop:
-        vpermd zmm8{k1}{z}, zmm2, zmm0
-        vpermd zmm0{k1}, zmm0, zmm0
-        vpaddd zmm2{k1}, zmm2, zmm8
-        vpcmpd k1, zmm5, zmm0, OP_NEQ ; vpcmpd k1, 4, zmm5, zmm0
-        kortestw k1, k1
-        jne conflict_loop
+        ;original = ;vpermd          zmm8 {k1} {z}, zmm2, zmm0
+        ;mine v1  = ;vpermd          zmm8 {k1} {z}, zmm2, zmm2
+        ;vpermd          zmm8 {k1} {z}, zmm8, zmm4
+        vpermd           zmm8 {k1} {z}, zmm0, zmm2
+        ;vpermd          zmm8, zmm2, zmm0
+        ;vpermd          zmm8 {k1} {z}, zmm2, zmm8
+        ;vpermd          zmm25 {k1},    zmm0, zmm0
+        ;vpermd          zmm26,         zmm0, zmm0
+        ;vpermd          zmm27 {k7},    zmm0, zmm0
+        ;vptestmd        k2, zmm5, zmm0
+        vpermd          zmm0 {k1},     zmm0, zmm0
+        ;vptestmd        k3 {k1}, zmm5, zmm0
+        ;vpsubd          zmm0 {k1},     zmm0, zmm4
+        vpaddd          zmm2 {k1},     zmm2, zmm8
+        vpcmpd          k1, zmm5, zmm0, OP_NEQ ; vpcmpd k1, 4, zmm5, zmm0
+        kortestw        k1, k1
+        jne             short conflict_loop
+        jmp             update
+
+conflict_loop_2:
+        ;original = ;vpermd          zmm8 {k1} {z}, zmm2, zmm0
+        ;mine v1  = ;vpermd          zmm8 {k1} {z}, zmm2, zmm2
+        vpermd          zmm8 {k1} {z}, zmm2, zmm4
+        ;vpermd          zmm8 {k1} {z}, zmm2, zmm8
+        vpsubd          zmm0 {k1}, zmm4, zmm4
+        ;vpermd          zmm0 {k1}, zmm0, zmm0
+        vpaddd          zmm2 {k1}, zmm2, zmm8
+        vpcmpd          k1, zmm5, zmm0, OP_NEQ ; vpcmpd k1, 4, zmm5, zmm0
+        kortestw        k1, k1
+        jne             short conflict_loop_2
+
 
 update:
-        vpaddd zmm0, zmm2, zmm1
-        kxnorw k1, k1, k1
-        add rcx, 16
-        vpscatterdd [r15+zmm3*4]{k1}, zmm0
-        cmp ebx, ecx
-        jb histogram_loop
+        vpaddd          zmm0, zmm2, zmm1
+        kxnorw          k1, k1, k1
+        add             rcx, 16
+        vpscatterdd     [r15+zmm3*4] {k1}, zmm0
+        cmp             ecx, ebx
+        jb              histogram_loop
 
 ;
 ; Indicate success.
