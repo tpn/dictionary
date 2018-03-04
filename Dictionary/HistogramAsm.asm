@@ -3272,7 +3272,7 @@ Chc99:
 ; Clear return value (Success = FALSE).
 ;
 
-        IACA_VC_START
+        ;IACA_VC_START
 
         xor     rax, rax                                ; Clear rax.
 
@@ -3360,7 +3360,7 @@ Chc30:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
 ; Extract byte values for each doubleword into separate registers.
 ;
 
-        IACA_VC_START
+        ;IACA_VC_START
 
         kxnorq          k1, k5, k5
         vpandd          zmm5, zmm1, zmm0
@@ -3438,7 +3438,6 @@ Chc38:  sub             ecx, 1                          ; Decrement counter.
 
 Chc40:  vptestmd        k1, zmm10, zmm10            ; Test 1st for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        vpaddd          zmm16, zmm16, zmm20         ; Add partial counts.
         kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc47                 ; No conflicts.
 
@@ -3464,6 +3463,7 @@ Chc45:  vpermd          zmm18 {k1} {z}, zmm10, zmm16
 ;
 
 Chc47:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpaddd          zmm16, zmm16, zmm20         ; Add partial counts.
         vpscatterdd     [r8+4*zmm5] {k7}, zmm16     ; Save counts.
 
 ;
@@ -3476,7 +3476,6 @@ Chc47:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 
 Chc50:  vptestmd        k1, zmm11, zmm11            ; Test 2nd for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        vpaddd          zmm16, zmm16, zmm21         ; Add partial counts.
         kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc57                 ; No conflicts.
 
@@ -3502,6 +3501,7 @@ Chc55:  vpermd          zmm18 {k1} {z}, zmm10, zmm16
 ;
 
 Chc57:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpaddd          zmm16, zmm16, zmm21         ; Add partial counts.
         vpscatterdd     [r9+4*zmm6] {k7}, zmm16     ; Save counts.
 
 ;
@@ -3514,7 +3514,6 @@ Chc57:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 
 Chc60:  vptestmd        k1, zmm12, zmm12            ; Test 3rd for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        vpaddd          zmm16, zmm16, zmm22         ; Add partial counts.
         kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc67                 ; No conflicts.
 
@@ -3541,6 +3540,7 @@ Chc65:  vpermd          zmm18 {k1} {z}, zmm10, zmm16
 ;
 
 Chc67:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpaddd          zmm16, zmm16, zmm22         ; Add partial counts.
         vpscatterdd     [r10+4*zmm7] {k7}, zmm16    ; Save counts.
 
 ;
@@ -3548,12 +3548,11 @@ Chc67:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 ;
 
 ;
-; Test the second register (zmm8) to see if it has any conflicts (zmm13).
+; Test the fourth register (zmm8) to see if it has any conflicts (zmm13).
 ;
 
 Chc70:  vptestmd        k1, zmm13, zmm13            ; Test 4th for conflicts.
         vmovaps         zmm16, zmm28                ; Copy AllOnes into zmm16.
-        vpaddd          zmm16, zmm16, zmm23         ; Add partial counts.
         kortestw        k1, k1                      ; Any conflicts?
         jz              short Chc77                 ; No conflicts.
 
@@ -3579,6 +3578,7 @@ Chc75:  vpermd          zmm18 {k1} {z}, zmm10, zmm16
 ;
 
 Chc77:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
+        vpaddd          zmm16, zmm16, zmm23         ; Add partial counts.
         vpscatterdd     [r11+4*zmm8] {k7}, zmm16    ; Save counts.
 
 ;
@@ -3593,10 +3593,10 @@ Chc77:  kxnorw          k7, k3, k3                  ; Set all bits in writemask.
 ; flight per histogram).
 ;
 
-Chc85:  mov         ecx, 8
-        xor         rax, rax
+Chc85:  mov             ecx, 8
+        xor             rax, rax
 
-        align       16
+        align           16
 
 Chc90:  vmovdqa32       zmm20, zmmword ptr [r8+rax]     ; Load 1st histo  0-63.
         vmovdqa32       zmm22, zmmword ptr [r9+rax]     ; Load 2nd histo  0-63.
@@ -3624,11 +3624,11 @@ Chc90:  vmovdqa32       zmm20, zmmword ptr [r8+rax]     ; Load 1st histo  0-63.
         sub             ecx, 1                          ; Decrement loop cntr.
         jnz             Chc90                           ; Continue if != 0.
 
-;
-; Indicate success.
-;
 
-        mov     rax, 1
+;
+; Shift rax (0x400) right 10 to indicate 1, our success return value.
+;
+        shr             rax, 10
 
 ;
 ; Restore non-volatile registers.
@@ -3662,7 +3662,7 @@ Chc99:
         add     rsp, LOCALS_SIZE
         ret
 
-        IACA_VC_END
+        ;IACA_VC_END
 
         NESTED_END CreateHistogramAvx512AlignedAsm_v3, _TEXT$00
 

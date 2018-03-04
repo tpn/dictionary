@@ -1209,11 +1209,9 @@ Scratch5(
     INIT_TIMESTAMP(15, "CreateHistogramAvx2AlignedAsm_v5_3_2");
     INIT_TIMESTAMP(16, "CreateHistogramAvx2AlignedAsm_v5_3_3");
 
-    if (UseAvx512) {
-        INIT_TIMESTAMP(9,  "CreateHistogramAvx512AlignedAsm   ");
-        INIT_TIMESTAMP(10, "CreateHistogramAvx512AlignedAsm_v2");
-        INIT_TIMESTAMP(17, "CreateHistogramAvx512AlignedAsm_v3");
-    }
+    INIT_TIMESTAMP(9,  "CreateHistogramAvx512AlignedAsm     ");
+    INIT_TIMESTAMP(10, "CreateHistogramAvx512AlignedAsm_v2  ");
+    INIT_TIMESTAMP(17, "CreateHistogramAvx512AlignedAsm_v3  ");
 
     OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
 
@@ -1267,26 +1265,6 @@ Scratch5(
         ASSERT(Api->CreateHistogramAvx2AlignedAsm_v5_3_3(&String, &HistogramB));
         Comparison = Api->CompareHistograms(Histogram1, Histogram2);
         ASSERT(Comparison == GenericEqual);
-
-        if (UseAvx512) {
-            ZeroStruct(HistogramB);
-            ASSERT(Api->CreateHistogramAvx512AlignedAsm(&String,
-                                                        &HistogramB));
-            Comparison = Api->CompareHistograms(Histogram1, Histogram2);
-            ASSERT(Comparison == GenericEqual);
-
-            ZeroStruct(HistogramB);
-            ASSERT(Api->CreateHistogramAvx512AlignedAsm_v2(&String,
-                                                           &HistogramB));
-            Comparison = Api->CompareHistograms(Histogram1, Histogram2);
-            ASSERT(Comparison == GenericEqual);
-
-            ZeroStruct(HistogramB);
-            ASSERT(Api->CreateHistogramAvx512AlignedAsm_v3(&String,
-                                                           &HistogramB));
-            Comparison = Api->CompareHistograms(Histogram1, Histogram2);
-            ASSERT(Comparison == GenericEqual);
-        }
 
         RESET_TIMESTAMP(1);
         for (Index = 0; Index < Iterations; Index++) {
@@ -1346,41 +1324,6 @@ Scratch5(
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(5, Length, Iterations);
-
-        if (UseAvx512) {
-            RESET_TIMESTAMP(9);
-            for (Index = 0; Index < Iterations; Index++) {
-                ZeroStruct(HistogramB);
-                START_TIMESTAMP(9);
-                Result = Api->CreateHistogramAvx512AlignedAsm(&String,
-                                                              &HistogramB);
-                END_TIMESTAMP(9);
-                ASSERT(Result);
-            }
-            FINISH_TIMESTAMP(9, Length, Iterations);
-
-            RESET_TIMESTAMP(10);
-            for (Index = 0; Index < Iterations; Index++) {
-                ZeroStruct(HistogramB);
-                START_TIMESTAMP(10);
-                Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
-                                                                 &HistogramB);
-                END_TIMESTAMP(10);
-                ASSERT(Result);
-            }
-            FINISH_TIMESTAMP(10, Length, Iterations);
-
-            RESET_TIMESTAMP(17);
-            for (Index = 0; Index < Iterations; Index++) {
-                ZeroStruct(HistogramB);
-                START_TIMESTAMP(17);
-                Result = Api->CreateHistogramAvx512AlignedAsm_v3(&String,
-                                                                 &HistogramB);
-                END_TIMESTAMP(17);
-                ASSERT(Result);
-            }
-            FINISH_TIMESTAMP(17, Length, Iterations);
-        }
 
         RESET_TIMESTAMP(6);
         for (Index = 0; Index < Iterations; Index++) {
@@ -1481,6 +1424,43 @@ Scratch5(
         }
         FINISH_TIMESTAMP(16, Length, Iterations);
 
+        if (!UseAvx512) {
+            OUTPUT_FLUSH();
+            continue;
+        }
+
+        RESET_TIMESTAMP(9);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(9);
+            Result = Api->CreateHistogramAvx512AlignedAsm(&String,
+                                                          &HistogramB);
+            END_TIMESTAMP(9);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(9, Length, Iterations);
+
+        RESET_TIMESTAMP(10);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(10);
+            Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
+                                                             &HistogramB);
+            END_TIMESTAMP(10);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(10, Length, Iterations);
+
+        RESET_TIMESTAMP(17);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(17);
+            Result = Api->CreateHistogramAvx512AlignedAsm_v3(&String,
+                                                             &HistogramB);
+            END_TIMESTAMP(17);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(17, Length, Iterations);
 
         OUTPUT_FLUSH();
     } while (*(++Length));
@@ -1505,6 +1485,14 @@ Scratch7(
     Result = _mm512_permutexvar_epi16(Index, Values);
 
 }
+
+#define COMPARE(Comparison, Histogram1, Histogram2, Output)      \
+    Comparison = Api->CompareHistograms(Histogram1, Histogram2); \
+    if (Comparison != GenericEqual) {                            \
+        SlowCompareHistogram(Histogram1, Histogram2, &Output);   \
+        OUTPUT_FLUSH();                                          \
+        __debugbreak();                                          \
+    }
 
 VOID
 Scratch6(
@@ -1685,26 +1673,27 @@ Scratch9(
     BOOLEAN Result;
     CHARACTER_HISTOGRAM_V4 HistogramA;
     CHARACTER_HISTOGRAM_V4 HistogramB;
-    //PCHARACTER_HISTOGRAM Histogram1;
-    //PCHARACTER_HISTOGRAM Histogram2;
+    PCHARACTER_HISTOGRAM Histogram1;
+    PCHARACTER_HISTOGRAM Histogram2;
     HANDLE OutputHandle;
     LARGE_INTEGER Frequency;
     TIMESTAMP Timestamp1;
     TIMESTAMP Timestamp2;
     TIMESTAMP Timestamp3;
+    TIMESTAMP Timestamp4;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
-    //RTL_GENERIC_COMPARE_RESULTS Comparison;
+    RTL_GENERIC_COMPARE_RESULTS Comparison;
     ULONG BytesWritten;
     ULONG CharsWritten;
     PCHAR Output;
     PCHAR OutputBuffer;
     ULONG Lengths[] = {
+        192,
+        384,
         64,
         128,
-        192,
         256,
-        384,
         512,
         1024,
         2048,
@@ -1722,6 +1711,9 @@ Scratch9(
 
     ZeroStruct(HistogramA);
     ZeroStruct(HistogramB);
+
+    Histogram1 = &HistogramA.Histogram1;
+    Histogram2 = &HistogramB.Histogram1;
 
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     ASSERT(OutputHandle);
@@ -1746,7 +1738,7 @@ Scratch9(
     String.Hash = 0;
     String.Buffer = Buffer;
 
-    if (1) {
+    if (0) {
         FillBufferWithBytes(Buffer,
                             AbcdRepeat,
                             //AlphabetRepeat,
@@ -1759,6 +1751,7 @@ Scratch9(
     INIT_TIMESTAMP(1, "CreateHistogramAvx2AlignedAsm     ");
     INIT_TIMESTAMP(2, "CreateHistogramAvx512AlignedAsm   ");
     INIT_TIMESTAMP(3, "CreateHistogramAvx512AlignedAsm_v2");
+    INIT_TIMESTAMP(4, "CreateHistogramAvx512AlignedAsm_v3");
 
     OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
 
@@ -1767,6 +1760,66 @@ Scratch9(
 
     do {
         String.Length = *Length;
+
+        ZeroStruct(HistogramA);
+        Result = Api->CreateHistogram(&String, Histogram1);
+        ASSERT(Result);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v2(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v3(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v4(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v5(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v5_2(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        Result = Api->CreateHistogramAvx2AlignedAsm_v5_3(&String, &HistogramB);
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAvx2AlignedAsm_v5_3_2(&String, &HistogramB));
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAvx2AlignedAsm_v5_3_3(&String, &HistogramB));
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAvx512AlignedAsm(&String, &HistogramB));
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAvx512AlignedAsm_v2(&String, &HistogramB));
+        Comparison = Api->CompareHistograms(Histogram1, Histogram2);
+        ASSERT(Comparison == GenericEqual);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAvx512AlignedAsm_v3(&String, &HistogramB));
+        COMPARE(Comparison, Histogram1, Histogram2, Output);
+        //ASSERT(Comparison == GenericEqual);
 
         RESET_TIMESTAMP(1);
         for (Index = 0; Index < Iterations; Index++) {
@@ -1801,7 +1854,18 @@ Scratch9(
         }
         FINISH_TIMESTAMP(3, Length, Iterations);
 
-        //OUTPUT_FLUSH();
+        RESET_TIMESTAMP(4);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(4);
+            Result = Api->CreateHistogramAvx512AlignedAsm_v3(&String,
+                                                             &HistogramB);
+            END_CYCLES(4);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(4, Length, Iterations);
+
+        OUTPUT_FLUSH();
     } while (*(++Length));
 
     Allocator->FreePointer(Allocator, (PPVOID)&Buffer);
