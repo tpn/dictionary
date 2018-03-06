@@ -1287,7 +1287,7 @@ Scratch5(
             ZeroStruct(HistogramA);
             START_TIMESTAMP(1);
             Result = Api->CreateHistogram(&String, &HistogramA);
-            END_CYCLES(1);
+            END_TIMESTAMP(1);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(1, Length, Iterations);
@@ -1301,7 +1301,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2C(&String,
                                                &HistogramB.Histogram1,
                                                &HistogramB.Histogram2);
-            END_CYCLES(2);
+            END_TIMESTAMP(2);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(2, Length, Iterations);
@@ -1313,7 +1313,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2AlignedC(&String,
                                                       &HistogramB.Histogram1,
                                                       &HistogramB.Histogram2);
-            END_CYCLES(3);
+            END_TIMESTAMP(3);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(3, Length, Iterations);
@@ -1325,7 +1325,7 @@ Scratch5(
             Result = Api->CreateHistogramAvx2AlignedC32(&String,
                                                         &HistogramB.Histogram1,
                                                         &HistogramB.Histogram2);
-            END_CYCLES(4);
+            END_TIMESTAMP(4);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(4, Length, Iterations);
@@ -1336,7 +1336,7 @@ Scratch5(
             START_TIMESTAMP(5);
             Result = Api->CreateHistogramAvx2AlignedCV4(&String,
                                                         &HistogramB);
-            END_CYCLES(5);
+            END_TIMESTAMP(5);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(5, Length, Iterations);
@@ -1349,7 +1349,7 @@ Scratch5(
             START_TIMESTAMP(6);
             Result = Api->CreateHistogramAvx2AlignedAsm(&String,
                                                         &HistogramB);
-            END_CYCLES(6);
+            END_TIMESTAMP(6);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(6, Length, Iterations);
@@ -1360,7 +1360,7 @@ Scratch5(
             START_TIMESTAMP(7);
             Result = Api->CreateHistogramAvx2AlignedAsm_v2(&String,
                                                            &HistogramB);
-            END_CYCLES(7);
+            END_TIMESTAMP(7);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(7, Length, Iterations);
@@ -1371,7 +1371,7 @@ Scratch5(
             START_TIMESTAMP(8);
             Result = Api->CreateHistogramAvx2AlignedAsm_v3(&String,
                                                            &HistogramB);
-            END_CYCLES(8);
+            END_TIMESTAMP(8);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(8, Length, Iterations);
@@ -1382,7 +1382,7 @@ Scratch5(
             START_TIMESTAMP(11);
             Result = Api->CreateHistogramAvx2AlignedAsm_v4(&String,
                                                            &HistogramB);
-            END_CYCLES(11);
+            END_TIMESTAMP(11);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(11, Length, Iterations);
@@ -1395,7 +1395,7 @@ Scratch5(
             START_TIMESTAMP(12);
             Result = Api->CreateHistogramAvx2AlignedAsm_v5(&String,
                                                            &HistogramB);
-            END_CYCLES(12);
+            END_TIMESTAMP(12);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(12, Length, Iterations);
@@ -1406,7 +1406,7 @@ Scratch5(
             START_TIMESTAMP(13);
             Result = Api->CreateHistogramAvx2AlignedAsm_v5_2(&String,
                                                              &HistogramB);
-            END_CYCLES(13);
+            END_TIMESTAMP(13);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(13, Length, Iterations);
@@ -1417,7 +1417,7 @@ Scratch5(
             START_TIMESTAMP(14);
             Result = Api->CreateHistogramAvx2AlignedAsm_v5_3(&String,
                                                              &HistogramB);
-            END_CYCLES(14);
+            END_TIMESTAMP(14);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(14, Length, Iterations);
@@ -1428,7 +1428,7 @@ Scratch5(
             START_TIMESTAMP(15);
             Result = Api->CreateHistogramAvx2AlignedAsm_v5_3_2(&String,
                                                                &HistogramB);
-            END_CYCLES(15);
+            END_TIMESTAMP(15);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(15, Length, Iterations);
@@ -1441,7 +1441,7 @@ Scratch5(
             START_TIMESTAMP(16);
             Result = Api->CreateHistogramAvx2AlignedAsm_v5_3_3(&String,
                                                                &HistogramB);
-            END_CYCLES(16);
+            END_TIMESTAMP(16);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(16, Length, Iterations);
@@ -1457,7 +1457,7 @@ Scratch5(
             START_TIMESTAMP(9);
             Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                           &HistogramB);
-            END_CYCLES(9);
+            END_TIMESTAMP(9);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(9, Length, Iterations);
@@ -1468,7 +1468,7 @@ Scratch5(
             START_TIMESTAMP(10);
             Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
                                                              &HistogramB);
-            END_CYCLES(10);
+            END_TIMESTAMP(10);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(10, Length, Iterations);
@@ -1481,7 +1481,7 @@ Scratch5(
             START_TIMESTAMP(17);
             Result = Api->CreateHistogramAvx512AlignedAsm_v3(&String,
                                                              &HistogramB);
-            END_CYCLES(17);
+            END_TIMESTAMP(17);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(17, Length, Iterations);
@@ -1492,7 +1492,7 @@ Scratch5(
             START_TIMESTAMP(18);
             Result = Api->CreateHistogramAvx512AlignedAsm_v4(&String,
                                                              &HistogramB);
-            END_CYCLES(18);
+            END_TIMESTAMP(18);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(18, Length, Iterations);
