@@ -32,6 +32,8 @@ ZMM_ALIGN equ 64
 YMM_ALIGN equ 32
 XMM_ALIGN equ 16
 
+PVOID typedef ptr
+
 _DATA$00 SEGMENT PAGE 'DATA'
 
         align   ZMM_ALIGN
@@ -3665,6 +3667,229 @@ Chc99:
         ;IACA_VC_END
 
         NESTED_END CreateHistogramAvx512AlignedAsm_v3, _TEXT$00
+
+
+        NESTED_ENTRY CreateHistogramAvx512AlignedAsm_v4, _TEXT$00
+
+;
+; Begin prologue.  Allocate stack space and save non-volatile registers.
+;
+
+        alloc_stack LOCALS_SIZE
+
+        save_xmm128 xmm6, Locals.SavedXmm6      ; Save non-volatile xmm6.
+        save_xmm128 xmm7, Locals.SavedXmm7      ; Save non-volatile xmm7.
+        save_xmm128 xmm8, Locals.SavedXmm8      ; Save non-volatile xmm8.
+        save_xmm128 xmm9, Locals.SavedXmm9      ; Save non-volatile xmm9.
+
+        END_PROLOGUE
+
+
+;
+; Clear return value (Success = FALSE).
+;
+
+        IACA_VC_START
+
+        xor     rax, rax                                ; Clear rax.
+
+;
+; Validate parameters.
+;
+
+        test    rcx, rcx                                ; Is rcx NULL?
+        jz      Chf99                                   ; Yes, abort.
+        test    rdx, rdx                                ; Is rdx NULL?
+        jz      Chf99                                   ; Yes, abort.
+
+;
+; Verify the string is at least 64 bytes long.
+;
+        mov     r9, 64                                  ; Initialize r9 to 64.
+        cmp     String.Length[rcx], r9d                 ; Compare Length to 64.
+        jl      Chf99                                   ; String is too short.
+
+;
+; Ensure the incoming string and histogram buffers are aligned to 32-byte
+; boundaries.
+;
+
+        mov     r9, 31                                  ; Initialize r9 to 31.
+        test    String.Buffer[rcx], r9                  ; Is string aligned?
+        jnz     Chf99                                   ; No, abort.
+
+;
+; Initialize loop variables.
+;
+;   rax - Counter for which byte of a doubleword we're processing.
+;
+;   rcx - Counter (length of string in multiples of 64).
+;
+;   rdx - Base string buffer.
+;
+;   r8  - Base address of first histogram buffer.
+;
+;   r9  - Inverted version of rax.  E.g. if:
+;           rax == 0, r9 == 4
+;           rax == 1, r9 == 3
+;           rax == 2, r9 == 2
+;           rax == 3, r9 == 1
+;           rax == 4, r9 == 0
+;
+;   r10 - Unused.
+;
+;   r11 - Unused.
+;
+;   zmm0 - Receives 64 bytes of the input string.
+;
+;   zmm1 - Vectorized mask isolating the byte we're interested in for a given
+;          round.  E.g. 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff.
+;
+;          N.B. We start off with byte 4 and work backwards to the first byte.
+;
+;   zmm2 - Receives the isolated byte in each doubleword.
+;
+;   zmm3 - Receives the gathered counts for a given set of bytes being
+;       processed.
+;
+;   zmm4 - Used as the permute control register.  Initially captures the result
+;       of the conflict comparison, and then the leading zero count.
+;
+;   zmm5 - Used to capture partial counts when handling conflicts.
+;
+;   zmm6 - Used for permuting counts as per the control register.
+;
+;   zmm7 - Vectorized mask base used at the top of the loop.
+;
+;   zmm28 - AllOnes
+;
+;   zmm29 - AllNegativeOnes
+;
+;   zmm31 - AllThirtyOne
+;
+
+        mov     r8,  rdx                            ; Load 1st histo buffer.
+        mov     rdx, String.Buffer[rcx]             ; Load string buffer.
+        mov     ecx, String.Length[rcx]             ; Load string length.
+        shr     ecx, 6                              ; Divide by 64 to get loop
+                                                    ; iterations.
+
+
+        vmovntdqa       zmm28, zmmword ptr [AllOnes]
+        vmovntdqa       zmm29, zmmword ptr [AllNegativeOnes]
+        vmovntdqa       zmm31, zmmword ptr [AllThirtyOne]
+
+;
+; Isolate the 4th byte in every doubleword.
+;
+
+        xor             rax, rax
+        not             al
+        vpbroadcastd    zmm7, eax
+
+        align 16
+
+Chf15:  vmovntdqa       zmm0, zmmword ptr [rdx]     ; Load 64 bytes into zmm0.
+        mov             eax, 4                      ; Initialize eax counter.
+        xor             r9, r9                      ; Clear r9.
+        add             rdx, 40h                    ; Advance buffer 64 bytes.
+        vmovaps         zmm1, zmm7                  ; Initialize byte mask.
+        vpxord          zmm9, zmm9, zmm9            ; Clear shift vector.
+
+        align 16
+
+Chf20:  kxnorw          k1, k5, k5
+        vpandd          zmm2, zmm1, zmm0
+        vpsrlq          zmm2, zmm2, xmm9
+
+        vpxord          zmm3, zmm3, zmm3            ; Clear counts.
+        vpgatherdd      zmm3 {k1}, [r8+4*zmm2]      ; Gather counts for bytes.
+        vpconflictd     zmm4, zmm2                  ; Detect conflicts.
+        vmovaps         zmm5, zmm28                 ; Copy AllOnes register.
+
+;
+; Increment the 0..3 counter (r9) by one, shift the vectorized mask control
+; (zmm1) right by one quadword.
+;
+
+        add             r9, 8
+        movd            xmm9, r9
+        vpslldq         zmm1, zmm1, 1
+
+;
+; Were there any conflicts?
+;
+
+        vptestmd        k1, zmm4, zmm4              ; Generate conflict mask.
+        kortestw        k1, k1                      ; Any conflicts?
+        je              Chf27                       ; No conflicts, update.
+
+;
+; There was at least one conflict.  Proceed with the conflict handling logic.
+;
+
+        vplzcntd        zmm4, zmm4                  ; Count leading zeros.
+        vpsubd          zmm4, zmm31, zmm4           ; Subtract 31 from elems.
+
+Chf25:  vpermd          zmm6 {k1} {z}, zmm4, zmm5   ; Capture partials.
+        vpermd          zmm4 {k1},     zmm4, zmm4   ; Permute control reg.
+        vpaddd          zmm5 {k1},     zmm5, zmm6   ; Add counts.
+        vpcmpd          k1, zmm4, zmm29, OP_NEQ     ; Generate new mask.
+        kortestw        k1, k1                      ; Any more conflicts?
+        jne             short Chf25                 ; Yes, jump back and repeat.
+
+;
+; If we get here, we've resolved all the conflicts (if there were any), and
+; need to add the final counts together then scatter everything back to its
+; appropriate location.
+;
+
+Chf27:  kxnorw          k1, k6, k6                  ; Set all bits in writemask.
+        vpaddd          zmm3, zmm3, zmm5            ; Add counts to total.
+        vpscatterdd     [r8+4*zmm2] {k1}, zmm3      ; Save counts.
+        sub             rax, 1                      ; Decrement loop counter.
+        jnz             Chf20                       ; If nz, jump back to cont.
+
+;
+; We've finished processing all four bytes in each doubleword in each vector.
+; Check for loop termination against the rcx counter.
+;
+
+        sub             ecx, 1                      ; Decrement counter.
+        jnz             Chf15                       ; Continue if != 0.
+
+;
+; No more bytes to process.  Indicate success and return.
+;
+
+        mov             rax, 1
+
+;
+; Restore non-volatile registers.
+;
+
+Chf99:
+        movdqa          xmm6,  Locals.SavedXmm6[rsp]
+        movdqa          xmm7,  Locals.SavedXmm7[rsp]
+        movdqa          xmm8,  Locals.SavedXmm8[rsp]
+        movdqa          xmm9,  Locals.SavedXmm9[rsp]
+
+;
+; Begin epilogue.  Deallocate stack space and return.
+;
+
+        add     rsp, LOCALS_SIZE
+        ret
+
+        IACA_VC_END
+
+
+        NESTED_END CreateHistogramAvx512AlignedAsm_v4, _TEXT$00
+
+        LEAF_ENTRY CreateHistogramAvx512AlignedAsm_v5, _TEXT$00
+        ret
+        LEAF_END CreateHistogramAvx512AlignedAsm_v5, _TEXT$00
+
 
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :

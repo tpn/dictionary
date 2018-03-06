@@ -478,6 +478,8 @@ typedef struct _DICTIONARY_FUNCTIONS {
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v2;
     PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v3;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v4;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAvx512AlignedAsm_v5;
 
 } DICTIONARY_FUNCTIONS;
 typedef DICTIONARY_FUNCTIONS *PDICTIONARY_FUNCTIONS;
@@ -533,6 +535,8 @@ LoadDictionaryModule(
         "CreateHistogramAvx512AlignedAsm",
         "CreateHistogramAvx512AlignedAsm_v2",
         "CreateHistogramAvx512AlignedAsm_v3",
+        "CreateHistogramAvx512AlignedAsm_v4",
+        "CreateHistogramAvx512AlignedAsm_v5",
 
     };
 

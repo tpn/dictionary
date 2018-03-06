@@ -28,5 +28,7 @@ EXPORTS
     CreateHistogramAvx512AlignedAsm
     CreateHistogramAvx512AlignedAsm_v2
     CreateHistogramAvx512AlignedAsm_v3
+    CreateHistogramAvx512AlignedAsm_v4
+    CreateHistogramAvx512AlignedAsm_v5
     CompareHistograms=CompareHistogramsAlignedAvx2
     CompareHistogramsAlignedAvx2
