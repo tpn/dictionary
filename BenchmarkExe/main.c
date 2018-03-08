@@ -780,92 +780,139 @@ typedef struct _TIMESTAMP {
     STRING Name;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
-    ULARGE_INTEGER Elapsed;
-    ULARGE_INTEGER Total;
+    ULARGE_INTEGER StartTsc;
+    ULARGE_INTEGER EndTsc;
+    ULARGE_INTEGER Tsc;
+    ULARGE_INTEGER TotalTsc;
+    ULARGE_INTEGER MinimumTsc;
+    ULARGE_INTEGER MaximumTsc;
+    ULARGE_INTEGER Cycles;
+    ULARGE_INTEGER MinimumCycles;
+    ULARGE_INTEGER MaximumCycles;
+    ULARGE_INTEGER TotalCycles;
     ULARGE_INTEGER Nanoseconds;
-    ULARGE_INTEGER Minimum;
-    ULARGE_INTEGER Maximum;
+    ULARGE_INTEGER TotalNanoseconds;
+    ULARGE_INTEGER MinimumNanoseconds;
+    ULARGE_INTEGER MaximumNanoseconds;
 } TIMESTAMP;
 typedef TIMESTAMP *PTIMESTAMP;
 
-#define INIT_TIMESTAMP(Idx, Namex)                       \
-    ZeroStruct(Timestamp##Idx);                          \
-    Timestamp##Idx##.Id = Idx;                           \
-    Timestamp##Idx##.Name.Length = sizeof(Namex)-1;      \
-    Timestamp##Idx##.Name.MaximumLength = sizeof(Namex); \
-    Timestamp##Idx##.Name.Buffer = Namex;                \
-    Timestamp##Idx##.Minimum.QuadPart = (ULONGLONG)-1
+#define INIT_TIMESTAMP(Idx, Namex)                               \
+    ZeroStruct(Timestamp##Idx);                                  \
+    Timestamp##Idx##.Id = Idx;                                   \
+    Timestamp##Idx##.Name.Length = sizeof(Namex)-1;              \
+    Timestamp##Idx##.Name.MaximumLength = sizeof(Namex);         \
+    Timestamp##Idx##.Name.Buffer = Namex;                        \
+    Timestamp##Idx##.TotalTsc.QuadPart = 0;                      \
+    Timestamp##Idx##.TotalCycles.QuadPart = 0;                   \
+    Timestamp##Idx##.TotalNanoseconds.QuadPart = 0;              \
+    Timestamp##Idx##.MinimumTsc.QuadPart = (ULONGLONG)-1;        \
+    Timestamp##Idx##.MinimumCycles.QuadPart = (ULONGLONG)-1;     \
+    Timestamp##Idx##.MinimumNanoseconds.QuadPart = (ULONGLONG)-1
 
-#define RESET_TIMESTAMP(Id)                           \
-    Timestamp##Id##.Count = 0;                        \
-    Timestamp##Id##.Total.QuadPart = 0;               \
-    Timestamp##Id##.Minimum.QuadPart = (ULONGLONG)-1; \
-    Timestamp##Id##.Maximum.QuadPart = 0
+#define RESET_TIMESTAMP(Id)                                      \
+    Timestamp##Id##.Count = 0;                                   \
+    Timestamp##Id##.TotalTsc.QuadPart = 0;                       \
+    Timestamp##Id##.TotalCycles.QuadPart = 0;                    \
+    Timestamp##Id##.TotalNanoseconds.QuadPart = 0;               \
+    Timestamp##Id##.MinimumTsc.QuadPart = (ULONGLONG)-1;         \
+    Timestamp##Id##.MaximumTsc.QuadPart = 0;                     \
+    Timestamp##Id##.MinimumCycles.QuadPart = (ULONGLONG)-1;      \
+    Timestamp##Id##.MaximumCycles.QuadPart = 0;                  \
+    Timestamp##Id##.MinimumNanoseconds.QuadPart = (ULONGLONG)-1; \
+    Timestamp##Id##.MaximumNanoseconds.QuadPart = 0
 
-#define START_TIMESTAMP(Id)                         \
-    ++Timestamp##Id##.Count;                        \
-    QueryPerformanceCounter(&Timestamp##Id##.Start)
+#define START_TIMESTAMP(Id)                          \
+    ++Timestamp##Id##.Count;                         \
+    QueryPerformanceCounter(&Timestamp##Id##.Start); \
+    Timestamp##Id##.StartTsc.QuadPart = __rdtsc()
 
-#define END_TIMESTAMP(Id)                                                   \
-    QueryPerformanceCounter(&Timestamp##Id##.End);                          \
-    Timestamp##Id##.Elapsed.QuadPart = (                                    \
-        Timestamp##Id##.End.QuadPart -                                      \
-        Timestamp##Id##.Start.QuadPart                                      \
-    );                                                                      \
-    Timestamp##Id##.Nanoseconds.QuadPart = (                                \
-        Timestamp##Id##.Elapsed.QuadPart *                                  \
-        TIMESTAMP_TO_NANOSECONDS                                            \
-    );                                                                      \
-    Timestamp##Id##.Nanoseconds.QuadPart /= Frequency.QuadPart;             \
-    Timestamp##Id##.Total.QuadPart += Timestamp##Id##.Nanoseconds.QuadPart; \
-    if (Timestamp##Id##.Minimum.QuadPart >                                  \
-        Timestamp##Id##.Nanoseconds.QuadPart) {                             \
-            Timestamp##Id##.Minimum.QuadPart = (                            \
-                Timestamp##Id##.Nanoseconds.QuadPart                        \
-            );                                                              \
-    }                                                                       \
-    if (Timestamp##Id##.Maximum.QuadPart <                                  \
-        Timestamp##Id##.Nanoseconds.QuadPart) {                             \
-            Timestamp##Id##.Maximum.QuadPart = (                            \
-                Timestamp##Id##.Nanoseconds.QuadPart                        \
-            );                                                              \
+#define END_TIMESTAMP(Id)                                       \
+    Timestamp##Id##.EndTsc.QuadPart = __rdtsc();                \
+    QueryPerformanceCounter(&Timestamp##Id##.End);              \
+    Timestamp##Id##.Tsc.QuadPart = (                            \
+        Timestamp##Id##.EndTsc.QuadPart -                       \
+        Timestamp##Id##.StartTsc.QuadPart                       \
+    );                                                          \
+    Timestamp##Id##.Cycles.QuadPart = (                         \
+        Timestamp##Id##.End.QuadPart -                          \
+        Timestamp##Id##.Start.QuadPart                          \
+    );                                                          \
+    Timestamp##Id##.TotalTsc.QuadPart += (                      \
+        Timestamp##Id##.Tsc.QuadPart                            \
+    );                                                          \
+    Timestamp##Id##.TotalCycles.QuadPart += (                   \
+        Timestamp##Id##.Cycles.QuadPart                         \
+    );                                                          \
+    Timestamp##Id##.Nanoseconds.QuadPart = (                    \
+        Timestamp##Id##.Cycles.QuadPart *                       \
+        TIMESTAMP_TO_NANOSECONDS                                \
+    );                                                          \
+    Timestamp##Id##.Nanoseconds.QuadPart /= Frequency.QuadPart; \
+    Timestamp##Id##.TotalNanoseconds.QuadPart += (              \
+        Timestamp##Id##.Nanoseconds.QuadPart                    \
+    );                                                          \
+    if (Timestamp##Id##.MinimumNanoseconds.QuadPart >           \
+        Timestamp##Id##.Nanoseconds.QuadPart) {                 \
+            Timestamp##Id##.MinimumNanoseconds.QuadPart = (     \
+                Timestamp##Id##.Nanoseconds.QuadPart            \
+            );                                                  \
+    }                                                           \
+    if (Timestamp##Id##.MaximumNanoseconds.QuadPart <           \
+        Timestamp##Id##.Nanoseconds.QuadPart) {                 \
+            Timestamp##Id##.MaximumNanoseconds.QuadPart = (     \
+                Timestamp##Id##.Nanoseconds.QuadPart            \
+            );                                                  \
+    }                                                           \
+    if (Timestamp##Id##.MinimumTsc.QuadPart >                   \
+        Timestamp##Id##.Tsc.QuadPart) {                         \
+            Timestamp##Id##.MinimumTsc.QuadPart = (             \
+                Timestamp##Id##.Tsc.QuadPart                    \
+            );                                                  \
+    }                                                           \
+    if (Timestamp##Id##.MaximumTsc.QuadPart <                   \
+        Timestamp##Id##.Tsc.QuadPart) {                         \
+            Timestamp##Id##.MaximumTsc.QuadPart = (             \
+                Timestamp##Id##.Tsc.QuadPart                    \
+            );                                                  \
+    }                                                           \
+    if (Timestamp##Id##.MinimumCycles.QuadPart >                \
+        Timestamp##Id##.Cycles.QuadPart) {                      \
+            Timestamp##Id##.MinimumCycles.QuadPart = (          \
+                Timestamp##Id##.Cycles.QuadPart                 \
+            );                                                  \
+    }                                                           \
+    if (Timestamp##Id##.MaximumCycles.QuadPart <                \
+        Timestamp##Id##.Cycles.QuadPart) {                      \
+            Timestamp##Id##.MaximumCycles.QuadPart = (          \
+                Timestamp##Id##.Cycles.QuadPart                 \
+            );                                                  \
     }
 
-#define END_CYCLES(Id)                                                  \
-    QueryPerformanceCounter(&Timestamp##Id##.End);                      \
-    Timestamp##Id##.Elapsed.QuadPart = (                                \
-        Timestamp##Id##.End.QuadPart -                                  \
-        Timestamp##Id##.Start.QuadPart                                  \
-    );                                                                  \
-    Timestamp##Id##.Nanoseconds.QuadPart = (                            \
-        Timestamp##Id##.Elapsed.QuadPart *                              \
-        TIMESTAMP_TO_NANOSECONDS                                        \
-    );                                                                  \
-    Timestamp##Id##.Nanoseconds.QuadPart /= Frequency.QuadPart;         \
-    Timestamp##Id##.Total.QuadPart += Timestamp##Id##.Elapsed.QuadPart; \
-    if (Timestamp##Id##.Minimum.QuadPart >                              \
-        Timestamp##Id##.Elapsed.QuadPart) {                             \
-            Timestamp##Id##.Minimum.QuadPart = (                        \
-                Timestamp##Id##.Elapsed.QuadPart                        \
-            );                                                          \
-    }                                                                   \
-    if (Timestamp##Id##.Maximum.QuadPart <                              \
-        Timestamp##Id##.Elapsed.QuadPart) {                             \
-            Timestamp##Id##.Maximum.QuadPart = (                        \
-                Timestamp##Id##.Elapsed.QuadPart                        \
-            );                                                          \
-    }
-
-#define FINISH_TIMESTAMP(Id, Length, Iterations)  \
-    OUTPUT_STRING(&Timestamp##Id##.Name);         \
-    OUTPUT_SEP();                                 \
-    OUTPUT_INT(*Length);                          \
-    OUTPUT_SEP();                                 \
-    OUTPUT_INT(Iterations);                       \
-    OUTPUT_SEP();                                 \
-    OUTPUT_INT(Timestamp##Id##.Minimum.QuadPart); \
-    OUTPUT_SEP();                                 \
-    OUTPUT_INT(Timestamp##Id##.Maximum.QuadPart); \
+#define FINISH_TIMESTAMP(Id, Length, Iterations)             \
+    OUTPUT_STRING(&Timestamp##Id##.Name);                    \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(*Length);                                     \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Iterations);                                  \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MinimumTsc.QuadPart);         \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MaximumTsc.QuadPart);         \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.TotalTsc.QuadPart);           \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MinimumCycles.QuadPart);      \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MaximumCycles.QuadPart);      \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.TotalCycles.QuadPart);        \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MinimumNanoseconds.QuadPart); \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.MaximumNanoseconds.QuadPart); \
+    OUTPUT_SEP();                                            \
+    OUTPUT_INT(Timestamp##Id##.TotalNanoseconds.QuadPart);   \
     OUTPUT_LF()
 
 VOID
@@ -1227,7 +1274,10 @@ Scratch5(
     INIT_TIMESTAMP(17, "CreateHistogramAvx512AlignedAsm_v3  ");
     INIT_TIMESTAMP(18, "CreateHistogramAvx512AlignedAsm_v4  ");
 
-    OUTPUT_RAW("Name,Length,Iterations,Minimum,Maximum\n");
+    OUTPUT_RAW("Name,Length,Iterations,"
+               "MinimumTsc,MaximumTsc,TotalTsc,"
+               "MinimumCycles,MaximumCycles,TotalCycles,"
+               "MinimumNanoseconds,MaximumNanoseconds,TotalNanoseconds\n");
 
     Iterations = 5000;
     Length = Lengths;
@@ -1904,7 +1954,7 @@ Scratch9(
             START_TIMESTAMP(1);
             Result = Api->CreateHistogramAvx2AlignedAsm(&String,
                                                         &HistogramB);
-            END_CYCLES(1);
+            END_TIMESTAMP(1);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(1, Length, Iterations);
@@ -1915,7 +1965,7 @@ Scratch9(
             START_TIMESTAMP(2);
             Result = Api->CreateHistogramAvx512AlignedAsm(&String,
                                                           &HistogramB);
-            END_CYCLES(2);
+            END_TIMESTAMP(2);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(2, Length, Iterations);
@@ -1926,7 +1976,7 @@ Scratch9(
             START_TIMESTAMP(3);
             Result = Api->CreateHistogramAvx512AlignedAsm_v2(&String,
                                                              &HistogramB);
-            END_CYCLES(3);
+            END_TIMESTAMP(3);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(3, Length, Iterations);
@@ -1937,7 +1987,7 @@ Scratch9(
             START_TIMESTAMP(4);
             Result = Api->CreateHistogramAvx512AlignedAsm_v3(&String,
                                                              &HistogramB);
-            END_CYCLES(4);
+            END_TIMESTAMP(4);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(4, Length, Iterations);
@@ -1948,7 +1998,7 @@ Scratch9(
             START_TIMESTAMP(5);
             Result = Api->CreateHistogramAvx512AlignedAsm_v4(&String,
                                                              &HistogramB);
-            END_CYCLES(5);
+            END_TIMESTAMP(5);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(5, Length, Iterations);
@@ -1960,7 +2010,7 @@ Scratch9(
             START_TIMESTAMP(6);
             Result = Api->CreateHistogramAvx512AlignedAsm_v5(&String,
                                                              &HistogramB);
-            END_CYCLES(6);
+            END_TIMESTAMP(6);
             ASSERT(Result);
         }
         FINISH_TIMESTAMP(6, Length, Iterations);
