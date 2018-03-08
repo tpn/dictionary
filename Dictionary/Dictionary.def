@@ -12,6 +12,8 @@ EXPORTS
     SetMinimumWordLength
     SetMaximumWordLength
     CreateHistogram
+    CreateHistogramAlignedAsm
+    CreateHistogramAlignedAsm_v2
     CreateHistogramAvx2C
     CreateHistogramAvx2AlignedC
     CreateHistogramAvx2AlignedCV4

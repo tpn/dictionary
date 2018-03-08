@@ -1142,6 +1142,8 @@ Scratch5(
     TIMESTAMP Timestamp16;
     TIMESTAMP Timestamp17;
     TIMESTAMP Timestamp18;
+    TIMESTAMP Timestamp19;
+    TIMESTAMP Timestamp20;
     RTL_GENERIC_COMPARE_RESULTS Comparison;
     ULONG BufferSize = 1 << 23;
     ULONGLONG OutputBufferSize;
@@ -1204,6 +1206,8 @@ Scratch5(
     CanWeUseAvx512(&UseAvx512);
 
     INIT_TIMESTAMP(1,  "CreateHistogram                     ");
+    INIT_TIMESTAMP(19, "CreateHistogramAlignedAsm           ");
+    INIT_TIMESTAMP(20, "CreateHistogramAlignedAsm_v2        ");
     INIT_TIMESTAMP(2,  "CreateHistogramAvx2C                ");
     INIT_TIMESTAMP(3,  "CreateHistogramAvx2AlignedC         ");
     INIT_TIMESTAMP(4,  "CreateHistogramAvx2AlignedC32       ");
@@ -1234,6 +1238,14 @@ Scratch5(
         ZeroStruct(HistogramA);
         Result = Api->CreateHistogram(&String, Histogram1);
         ASSERT(Result);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAlignedAsm(&String, &HistogramB));
+        COMPARE(Comparison, Histogram1, Histogram2, Output);
+
+        ZeroStruct(HistogramB);
+        ASSERT(Api->CreateHistogramAlignedAsm_v2(&String, &HistogramB));
+        COMPARE(Comparison, Histogram1, Histogram2, Output);
 
         ZeroStruct(HistogramB);
         Result = Api->CreateHistogramAvx2AlignedAsm_v2(&String, &HistogramB);
@@ -1293,6 +1305,28 @@ Scratch5(
         FINISH_TIMESTAMP(1, Length, Iterations);
 
         OUTPUT_FLUSH();
+
+        RESET_TIMESTAMP(19);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(19);
+            Result = Api->CreateHistogramAlignedAsm(&String, &HistogramB);
+            END_TIMESTAMP(19);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(19, Length, Iterations);
+
+
+        RESET_TIMESTAMP(20);
+        for (Index = 0; Index < Iterations; Index++) {
+            ZeroStruct(HistogramB);
+            START_TIMESTAMP(20);
+            Result = Api->CreateHistogramAlignedAsm_v2(&String, &HistogramB);
+            END_TIMESTAMP(20);
+            ASSERT(Result);
+        }
+        FINISH_TIMESTAMP(20, Length, Iterations);
+
 
         RESET_TIMESTAMP(2);
         for (Index = 0; Index < Iterations; Index++) {

@@ -462,6 +462,8 @@ typedef struct _DICTIONARY_FUNCTIONS {
 
     PCOMPARE_HISTOGRAMS CompareHistograms;
     PCREATE_HISTOGRAM CreateHistogram;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAlignedAsm;
+    PCREATE_HISTOGRAM_V4 CreateHistogramAlignedAsm_v2;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2C;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC;
     PCREATE_HISTOGRAM2 CreateHistogramAvx2AlignedC32;
@@ -519,6 +521,8 @@ LoadDictionaryModule(
 
         "CompareHistograms",
         "CreateHistogram",
+        "CreateHistogramAlignedAsm",
+        "CreateHistogramAlignedAsm_v2",
         "CreateHistogramAvx2C",
         "CreateHistogramAvx2AlignedC",
         "CreateHistogramAvx2AlignedC32",

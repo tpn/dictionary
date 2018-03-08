@@ -203,6 +203,317 @@ Histogram typedef CHARACTER_HISTOGRAM_V4
 ;++
 ;
 ; BOOLEAN
+; CreateHistogramAlignedAsm(
+;     _In_ PCLONG_STRING String,
+;     _Inout_updates_bytes_(sizeof(*Histogram))
+;         PCHARACTER_HISTOGRAM_V4 Histogram
+;     );
+;
+; Routine Description:
+;
+;   This routine creates a histogram for a given string.
+;
+; Arguments:
+;
+;   String (rcx) - Supplies a pointer to a LONG_STRING structure that contains
+;       the string for which a histogram is to be created.
+;
+;   Histogram (rdx) - Supplies an address that receives the histogram for the
+;       given input string.
+;
+; Return Value:
+;
+;   TRUE on success, FALSE on failure.
+;
+;--
+
+        LEAF_ENTRY CreateHistogramAlignedAsm, _TEXT$00
+
+;
+; Clear return value (Success = FALSE).
+;
+
+        xor     rax, rax                                ; Clear rax.
+
+;
+; Validate parameters.
+;
+
+        test    rcx, rcx                                ; Is rcx NULL?
+        jz      Cha99                                   ; Yes, abort.
+        test    rdx, rdx                                ; Is rdx NULL?
+        jz      Cha99                                   ; Yes, abort.
+
+;
+; Verify the string is at least 64 bytes long.
+;
+        mov     r9, 64                                  ; Initialize r9 to 64.
+        cmp     String.Length[rcx], r9d                 ; Compare Length to 64.
+        jl      Cha99                                   ; String is too short.
+
+;
+; Ensure the incoming string and histogram buffers are aligned to 32-byte
+; boundaries.
+;
+
+        mov     r9, 31                                  ; Initialize r9 to 31.
+        test    String.Buffer[rcx], r9                  ; Is string aligned?
+        jnz     Cha99                                   ; No, abort.
+
+;
+; Initialize loop variables.
+;
+;   rcx - Counter.
+;
+;   rdx - Base string buffer.
+;
+;   r8  - Base address of first histogram buffer.
+;
+;   r9  - Base address of second histogram buffer.
+;
+;   r10 - Loop counter (string length shifted right 3 times).
+;
+
+        mov     r8, rdx                             ; Load 1st histo buffer.
+        lea     r9, Histogram.Histogram2[r8]        ; Load 2nd histo buffer.
+        mov     rdx, String.Buffer[rcx]             ; Load string buffer.
+        mov     r10d, String.Length[rcx]            ; Load string length.
+        shr     r10, 3                              ; Divide by 8 to get loop
+                                                    ; iterations.
+
+;
+; Top of the histogram loop.
+;
+
+        align 16
+
+        ;IACA_VC_START
+
+
+;
+; Load 8 bytes into rax and advance the buffer pointer rdx.
+;
+
+Cha50:  mov         rax, [rdx]                  ; Load 8 bytes into rax.
+        add         rdx, 8                      ; Bump pointer.
+
+;
+; Process bytes 1 and 2.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 3 and 4.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 5 and 6.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 7 and 8.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; End of loop.  Update loop counter and determine if we're finished.
+;
+
+        sub         r10, 1                      ; Decrement loop counter.
+        jnz         short Cha50                 ; If nz, continue loop.
+
+;
+; We've finished creating the histogram.  Indicate success and return.
+;
+
+Cha98:  mov rax, 1
+        ;IACA_VC_END
+
+Cha99:  ret
+
+        LEAF_END CreateHistogramAlignedAsm, _TEXT$00
+
+;
+; Alternate version of routine above that uses two histogram buffers and sums
+; them at the end.
+;
+
+        LEAF_ENTRY CreateHistogramAlignedAsm_v2, _TEXT$00
+
+;
+; Clear return value (Success = FALSE).
+;
+
+        xor     rax, rax                                ; Clear rax.
+
+;
+; Validate parameters.
+;
+
+        test    rcx, rcx                                ; Is rcx NULL?
+        jz      Cha99                                   ; Yes, abort.
+        test    rdx, rdx                                ; Is rdx NULL?
+        jz      Cha99                                   ; Yes, abort.
+
+;
+; Verify the string is at least 64 bytes long.
+;
+        mov     r9, 64                                  ; Initialize r9 to 64.
+        cmp     String.Length[rcx], r9d                 ; Compare Length to 64.
+        jl      Cha99                                   ; String is too short.
+
+;
+; Ensure the incoming string and histogram buffers are aligned to 32-byte
+; boundaries.
+;
+
+        mov     r9, 31                                  ; Initialize r9 to 31.
+        test    String.Buffer[rcx], r9                  ; Is string aligned?
+        jnz     Cha99                                   ; No, abort.
+
+;
+; Initialize loop variables.
+;
+;   rcx - Counter.
+;
+;   rdx - Base string buffer.
+;
+;   r8  - Base address of first histogram buffer.
+;
+;   r9  - Base address of second histogram buffer.
+;
+;   r10 - Loop counter (string length shifted right 3 times).
+;
+
+        mov     r8, rdx                             ; Load 1st histo buffer.
+        lea     r9, Histogram.Histogram2[r8]        ; Load 2nd histo buffer.
+        mov     rdx, String.Buffer[rcx]             ; Load string buffer.
+        mov     r10d, String.Length[rcx]            ; Load string length.
+        shr     r10, 3                              ; Divide by 8 to get loop
+                                                    ; iterations.
+
+;
+; Top of the histogram loop.
+;
+
+        align 16
+
+        ;IACA_VC_START
+
+
+;
+; Load 8 bytes into rax and advance the buffer pointer rdx.
+;
+
+Cha50:  mov         rax, [rdx]                  ; Load 8 bytes into rax.
+        add         rdx, 8                      ; Bump pointer.
+
+;
+; Process bytes 1 and 2.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r9 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 3 and 4.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r9 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 5 and 6.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r9 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; Process bytes 7 and 8.
+;
+
+        movzx       rcx, al                     ; Isolate lower byte.
+        add         dword ptr [r8 + rcx * 4], 1 ; Update count for lower.
+        movzx       ecx, ah                     ; Isolate upper byte.
+        shr         rax, 16                     ; Shift to the next two bytes.
+        add         dword ptr [r9 + rcx * 4], 1 ; Update count for upper byte.
+
+;
+; End of loop.  Update loop counter and determine if we're finished.
+;
+
+        sub         r10, 1                      ; Decrement loop counter.
+        jnz         short Cha50                 ; If nz, continue loop.
+
+;
+; We've finished creating the histogram.  Merge the two histograms 64 bytes at
+; a time using YMM registers.
+;
+
+        mov         ecx, 16                             ; Initialize counter.
+
+        align 16
+
+Cha75:  vmovntdqa   ymm0, ymmword ptr [r8+rax]      ; Load 1st histo  0-31.
+        vmovntdqa   ymm1, ymmword ptr [r8+rax+20h]  ; Load 1st histo 32-63.
+        vmovntdqa   ymm2, ymmword ptr [r9+rax]      ; Load 2nd histo  0-31.
+        vmovntdqa   ymm3, ymmword ptr [r9+rax+20h]  ; Load 2nd histo 32-63.
+
+        vpaddd      ymm4, ymm0, ymm2                ; Add  0-31 counts.
+        vpaddd      ymm5, ymm1, ymm3                ; Add 32-63 counts.
+
+        vmovntdq    ymmword ptr [r8+rax], ymm4      ; Save counts for  0-31.
+        vmovntdq    ymmword ptr [r8+rax+20h], ymm5  ; Save counts for 32-63.
+
+        add         rax, 40h                        ; Advance to next 64 bytes.
+        sub         ecx, 1                          ; Decrement loop counter.
+        jnz         short Cha75                     ; Continue if != 0.
+
+;
+; Indicate success and return.
+;
+
+Cha98:  mov rax, 1
+        ;IACA_VC_END
+
+Cha99:  ret
+
+        LEAF_END CreateHistogramAlignedAsm_v2, _TEXT$00
+
+;++
+;
+; BOOLEAN
 ; CreateHistogramAvx2AlignedAsm(
 ;     _In_ PCLONG_STRING String,
 ;     _Inout_updates_bytes_(sizeof(*Histogram))
