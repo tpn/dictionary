@@ -20,6 +20,7 @@ residing at position 102 in the array would be incremented to 1.)
 
 The bitmap is a 256-bit, 32-byte structure named [CHARACTER_BITMAP](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L63), which is defined as follows:
 
+```c
     typedef union DECLSPEC_ALIGN(32) _CHARACTER_BITMAP {
          YMMWORD Ymm;
          XMMWORD Xmm[2];
@@ -28,9 +29,11 @@ The bitmap is a 256-bit, 32-byte structure named [CHARACTER_BITMAP](https://gith
     C_ASSERT(sizeof(CHARACTER_BITMAP) == 32);
     typedef CHARACTER_BITMAP *PCHARACTER_BITMAP;
     typedef const CHARACTER_BITMAP *PCCHARACTER_BITMAP;
+```
 
 The histogram is a 1024 byte structure named [CHARACTER_HISTOGRAM](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L72), which is defined as follows:
 
+```c
     typedef union DECLSPEC_ALIGN(32) _CHARACTER_HISTOGRAM {
         YMMWORD Ymm[32];
         XMMWORD Xmm[64];
@@ -39,6 +42,7 @@ The histogram is a 1024 byte structure named [CHARACTER_HISTOGRAM](https://githu
     C_ASSERT(sizeof(CHARACTER_HISTOGRAM) == 1024);
     typedef CHARACTER_HISTOGRAM *PCHARACTER_HISTOGRAM;
     typedef const CHARACTER_HISTOGRAM *PCCHARACTER_HISTOGRAM;
+```
 
 DECLSPEC_ALIGN(32) is used to inform the compiler that the structures should be
 aligned on 32-byte boundaries.  This is done to permit the use of optimal AVX2
@@ -72,6 +76,7 @@ So, I decided to make bitmaps the top-level AVL tree structure.  The private
 [DICTIONARY](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L529)
 structure embeds a [BITMAP_TABLE](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L244) structure, which is simply an [RTL_AVL_TABLE](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L131) structure.  A bitmap table entry is simply a wrapper around a [HISTOGRAM_TABLE](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L244)
 
+```c
     typedef struct _BITMAP_TABLE {
         RTL_AVL_TABLE Avl;
     } BITMAP_TABLE;
@@ -81,10 +86,12 @@ structure embeds a [BITMAP_TABLE](https://github.com/tpn/dictionary/blob/v0.7/Di
         HISTOGRAM_TABLE HistogramTable;
     } BITMAP_TABLE_ENTRY;
     typedef BITMAP_TABLE_ENTRY *PBITMAP_TABLE_ENTRY;
+```
 
 Likewise, the HISTOGRAM_TABLE is simply an RTL_AVL_TREE, with each entry
 embedding a WORD_TABLE:
 
+```c
     typedef struct _HISTOGRAM_TABLE {
         RTL_AVL_TABLE Avl;
     } HISTOGRAM_TABLE;
@@ -94,9 +101,11 @@ embedding a WORD_TABLE:
         WORD_TABLE WordTable;
     } HISTOGRAM_TABLE_ENTRY;
     typedef HISTOGRAM_TABLE_ENTRY *PHISTOGRAM_TABLE_ENTRY;
+```
 
 The WORD_TABLE is actually a hash table.  Kidding, it's also an AVL table:
 
+```c
     typedef struct _WORD_TABLE {
         RTL_AVL_TABLE Avl;
     } WORD_TABLE;
@@ -107,6 +116,7 @@ The WORD_TABLE is actually a hash table.  Kidding, it's also an AVL table:
         LIST_ENTRY LengthListEntry;
     } WORD_TABLE_ENTRY;
     typedef WORD_TABLE_ENTRY *PWORD_TABLE_ENTRY;
+```
 
 The WORD_TABLE captures WORD_TABLE_ENTRY structures, where we finally see the
 actual underlying words that were added to the dictionary.
@@ -166,6 +176,7 @@ table!  The dictionary has a [top-level LengthTable](https://github.com/tpn/dict
 which is an instance of a [LENGTH_TABLE](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L185),
 which captures LENGTH_TABLE_ENTRY records, which look like this:
 
+```c
     typedef struct _LENGTH_TABLE {
         RTL_AVL_TABLE Avl;
     } LENGTH_TABLE;
@@ -175,6 +186,7 @@ which captures LENGTH_TABLE_ENTRY records, which look like this:
         LIST_ENTRY LengthListHead;
     } LENGTH_TABLE_ENTRY;
     typedef LENGTH_TABLE_ENTRY *PLENGTH_TABLE_ENTRY;
+```
 
 So, one of the roles of `AddWordEntry` is to [create a length table entry](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/AddWord.c#L378)
 for the given word's length if one doesn't already exist, and then
@@ -203,12 +215,14 @@ So, one of the responsibilities of the [InitializeWord](https://github.com/tpn/d
 routine is to generate hash values for the bitmap, histogram and word.
 I use a single ULONG for the hash, and simply use CRC32 to generate it:
 
+```c
     BitmapHash = Length;
     for (Index = 0; Index < ARRAYSIZE(Bitmap->Bits); Index++) {
         Hash.Index = Index;
         Hash.Value = Bitmap->Bits[Index];
         BitmapHash = _mm_crc32_u32(BitmapHash, Hash.AsULong);
     }
+```
 
 CRC32 is not a cryptographic hash, and even if it were, there is always the
 possibility for collisions (two different values hashing to the same hash value)
@@ -243,6 +257,7 @@ and predictable so overall it's a reasonable trade-off I think.
 There's another reason I chose a ULONG to capture the hash value for everything.
 If you look at the NT DDK, you'll see RTL_BALANCED_LINKS defined as follows:
 
+```c
     typedef struct _RTL_BALANCED_LINKS {
         struct _RTL_BALANCED_LINKS *Parent;
         struct _RTL_BALANCED_LINKS *LeftChild;
@@ -251,16 +266,19 @@ If you look at the NT DDK, you'll see RTL_BALANCED_LINKS defined as follows:
         UCHAR Reserved[3];
     } RTL_BALANCED_LINKS;
     typedef RTL_BALANCED_LINKS *PRTL_BALANCED_LINKS;
+```
 
 That structure is the header for every AVL table entry inserted into the table;
 the Rtl insertion routines add in the size of the structure before calling the
 allocator you've provided.  Your user data is then placed after that structure,
 such that the actual structure looks something like this:
 
+```c
     typedef struct _ENTRY_HEADER {
         RTL_BALANCED_LINKS Links;
         ULONGLONG UserData;
     } ENTRY_HEADER;
+```
 
 Now, what's interesting about that is that FIELD_OFFSET(ENTRY_HEADER, UserData)
 returns 32, but if you calculate the size of RTL_BALANCED_LINKS by eyeballing
@@ -271,6 +289,7 @@ What you don't see is the extra ULONG in padding that is implied due to x64
 that our [table entry header](https://github.com/tpn/dictionary/blob/v0.7/Dictionary/DictionaryPrivate.h#L260)
 looks like this:
 
+```c
     typedef struct _TABLE_ENTRY_HEADER {
 
         union {
@@ -342,6 +361,7 @@ looks like this:
     } TABLE_ENTRY_HEADER;
     typedef TABLE_ENTRY_HEADER *PTABLE_ENTRY_HEADER;
     C_ASSERT(FIELD_OFFSET(TABLE_ENTRY_HEADER, UserData) == 32);
+```
 
 It's a complete and utter abuse of structure padding, absolutely not recommended
 by Microsoft, could cause everything to break at a later date if the AVL
